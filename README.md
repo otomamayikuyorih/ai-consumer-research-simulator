@@ -3,7 +3,7 @@
 **第5回 Agentic AI Hackathon with Google Cloud 提出プロジェクト**
 
 [![Google Cloud](https://img.shields.io/badge/Google_Cloud-Cloud_Run-4285F4?logo=google-cloud&logoColor=white)](https://cloud.google.com/run)
-[![Google Gemini](https://img.shields.io/badge/AI_Engine-Gemini_2.5_Flash-8E75B2?logo=google-gemini&logoColor=white)](https://ai.google.dev/)
+[![Google Gemini](https://img.shields.io/badge/AI_Engine-Gemini_3.8_Flash-8E75B2?logo=google-gemini&logoColor=white)](https://ai.google.dev/)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI_3.12-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/Frontend-React_18_TypeScript-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/UI-Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
@@ -24,7 +24,7 @@
 
 ## 🏗️ システムアーキテクチャ
 
-Google Cloud Run の完全サーバーレスコンテナ基盤上に、FastAPIバックエンドとReact SPAを統合ホスティング。Google Gemini 2.5 Flash / Vertex AI の高速並列推論基盤を活用し、高精度かつ低レイテンシ・ゼロアイドルコストを実現しています。
+Google Cloud Run の完全サーバーレスコンテナ基盤上に、FastAPIバックエンドとReact SPAを統合ホスティング。Google Gemini 3.8 Flash / Vertex AI の高速並列推論基盤を活用し、高精度かつ低レイテンシ・ゼロアイドルコストを実現しています。
 
 ![システムアーキテクチャ図](docs/system_architecture.png)
 
@@ -34,7 +34,7 @@ Google Cloud Run の完全サーバーレスコンテナ基盤上に、FastAPI�
 |---|---|---|
 | **フロントエンド** | React 18, TypeScript, Vite, Tailwind CSS, Plotly.js | 2階層ナビゲーション、即時多変量解析可視化、レスポンシブUI |
 | **実行基盤** | **Google Cloud Run** | 完全マネージドサーバーレスコンテナ、コールドスタート最小化、0〜N自動スケール |
-| **AI推論基盤** | **Google Gemini 2.5 Flash / Vertex AI** | 高速並列推論、構造化JSON Schema出力、定性生声の忠実抽出 |
+| **AI推論基盤** | **Google Gemini 3.8 Flash / Vertex AI** | 高速並列推論、構造化JSON Schema出力、定性生声の忠実抽出 |
 | **セキュリティ・認証** | **GCP Secret Manager** / 環境変数分離 | APIキー秘匿、個人情報マスク、セキュア実行 |
 | **ガバナンス・可観測性** | **Cloud Logging** / 同意管理・撤回API | 構造化JSONログ、推論トレーシング、実在被験者データ削除（GDPR/個人情報保護法準拠） |
 | **統計・機械学習** | pandas, scikit-learn, scipy, numpy | PCA（主成分分析）、K-Meansクラスタリング、カイ二乗検定、Cohen's d、t検定 |

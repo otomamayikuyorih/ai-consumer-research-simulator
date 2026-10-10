@@ -5,7 +5,7 @@ class Settings(BaseModel):
     PROJECT_NAME: str = "AI Consumer Research Simulator"
     API_V1_STR: str = "/api"
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    DEFAULT_GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    DEFAULT_GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./consumer_research.db")
     CORS_ORIGINS: list[str] = ["*"]
     

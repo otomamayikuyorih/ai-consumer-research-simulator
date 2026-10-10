@@ -63,9 +63,9 @@ SCENES = [
     {
         "id": "scene05",
         "title": "自律回答推論エージェントによるアンケート調査",
-        "subtitle": "単一選択・複数選択・5段階評価・自由記述に Gemini 2.5 Flash で高速並列回答",
+        "subtitle": "単一選択・複数選択・5段階評価・自由記述に Gemini 3.8 Flash で高速並列回答",
         "tag": "05 / SURVEY SIMULATION",
-        "text": "次にアンケート調査です。設問形式は単一選択、5段階評価、自由記述に対応。Google Gemini 2.5 Flash により、各ペルソナが自身の価値観と一貫性を保ちながら自律的に回答を生成します。",
+        "text": "次にアンケート調査です。設問形式は単一選択、5段階評価、自由記述に対応。Google Gemini 3.8 Flash により、各ペルソナが自身の価値観と一貫性を保ちながら自律的に回答を生成します。",
         "type": "survey_sim",
     },
     {
@@ -111,9 +111,9 @@ SCENES = [
     {
         "id": "scene11",
         "title": "Google Cloud サーバーレス構成 ＆ まとめ",
-        "subtitle": "Cloud Run ＋ Gemini 2.5 Flash によるゼロアイドルコスト ＆ 完全オンデマンド推論",
+        "subtitle": "Cloud Run ＋ Gemini 3.8 Flash によるゼロアイドルコスト ＆ 完全オンデマンド推論",
         "tag": "11 / ARCHITECTURE & SUMMARY",
-        "text": "Google Cloud Run の完全サーバーレスコンテナと Gemini 2.5 Flash の高速推論により、ゼロアイドルコストと高スケーラビリティを両立しました。生活者の声を科学する、新しいAIエージェントの姿です。ご視聴ありがとうございました。",
+        "text": "Google Cloud Run の完全サーバーレスコンテナと Gemini 3.8 Flash の高速推論により、ゼロアイドルコストと高スケーラビリティを両立しました。生活者の声を科学する、新しいAIエージェントの姿です。ご視聴ありがとうございました。",
         "type": "summary",
     },
 ]
@@ -140,9 +140,9 @@ def render_base_slide(sc):
     draw.rounded_rectangle([(1430, 32), (1640, 78)], radius=8, fill=(66, 133, 244))
     draw.text((1445, 42), "☁ Cloud Run", font=get_font(FONT_BOLD_PATH, 22), fill=(255, 255, 255))
 
-    # Gemini 2.5 Flash Badge
+    # Gemini 3.8 Flash Badge
     draw.rounded_rectangle([(1660, 32), (1860, 78)], radius=8, fill=(142, 117, 178))
-    draw.text((1675, 42), "✦ Gemini 2.5", font=get_font(FONT_BOLD_PATH, 22), fill=(255, 255, 255))
+    draw.text((1675, 42), "✦ Gemini 3.8", font=get_font(FONT_BOLD_PATH, 22), fill=(255, 255, 255))
 
     # Bottom Subtitle Area (Lower Third)
     draw.rectangle([(0, 920), (1920, 1080)], fill=(10, 15, 29))

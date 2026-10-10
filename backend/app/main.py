@@ -70,7 +70,7 @@ def get_system_status():
             "project_id": settings.GOOGLE_CLOUD_PROJECT,
             "service": settings.CLOUD_RUN_SERVICE,
             "revision": settings.CLOUD_RUN_REVISION,
-            "ai_product": "Google Gemini 2.5 Flash / Vertex AI Model Garden",
+            "ai_product": "Google Gemini 3.8 Flash / Vertex AI Model Garden",
             "execution_product": "Cloud Run (Fully Managed Serverless Container)"
         },
         "features": {

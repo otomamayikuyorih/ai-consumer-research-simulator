@@ -55,9 +55,9 @@ SCENES = [
     {
         "id": "scene05",
         "title": "自律回答推論エージェントによるアンケート調査",
-        "subtitle": "単一選択・複数選択・5段階評価・自由記述に Gemini 2.5 Flash で高速並列回答",
+        "subtitle": "単一選択・複数選択・5段階評価・自由記述に Gemini 3.8 Flash で高速並列回答",
         "tag": "05 / SURVEY SIMULATION",
-        "text": "次にアンケート調査です。設問形式は単一選択、5段階評価、自由記述に対応。Google Gemini 2.5 Flash により、各ペルソナが自身の価値観と一貫性を保ちながら自律的に回答を生成します。",
+        "text": "次にアンケート調査です。設問形式は単一選択、5段階評価、自由記述に対応。Google Gemini 3.8 Flash により、各ペルソナが自身の価値観と一貫性を保ちながら自律的に回答を生成します。",
         "type": "survey_sim",
     },
     {
@@ -103,9 +103,9 @@ SCENES = [
     {
         "id": "scene11",
         "title": "Google Cloud サーバーレス構成 ＆ まとめ",
-        "subtitle": "Cloud Run ＋ Gemini 2.5 Flash によるゼロアイドルコスト ＆ 完全オンデマンド推論",
+        "subtitle": "Cloud Run ＋ Gemini 3.8 Flash によるゼロアイドルコスト ＆ 完全オンデマンド推論",
         "tag": "11 / ARCHITECTURE & SUMMARY",
-        "text": "Google Cloud Run の完全サーバーレスコンテナと Gemini 2.5 Flash の高速推論により、ゼロアイドルコストと高スケーラビリティを両立しました。生活者の声を科学する、新しいAIエージェントの姿です。ご視聴ありがとうございました。",
+        "text": "Google Cloud Run の完全サーバーレスコンテナと Gemini 3.8 Flash の高速推論により、ゼロアイドルコストと高スケーラビリティを両立しました。生活者の声を科学する、新しいAIエージェントの姿です。ご視聴ありがとうございました。",
         "type": "summary",
     },
 ]
