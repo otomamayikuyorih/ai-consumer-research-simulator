@@ -7,7 +7,7 @@
 
 ## 1. 動作環境アクセス
 
-- **デプロイURL**: （Cloud Run 公開URL）
+- **デプロイURL**: https://ai-consumer-research-simulator-121643671058.asia-northeast1.run.app
 - **ローカル起動URL**: `http://127.0.0.1:8000` (FastAPI バックエンドおよび統合 React フロントエンド)
 - **API ドキュメント (Swagger UI)**: `/docs`
 - **システム・GCPステータス API**: `/api/status`

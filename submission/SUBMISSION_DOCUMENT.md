@@ -7,7 +7,7 @@
 - **プロジェクト名**: AI Consumer Research Simulator（AI仮想消費者調査Webアプリケーション）
 - **キャッチコピー**: 日本の公的統計とスタンフォードAI4PB研究に基づく、次世代自律型マルチエージェント消費者調査・商品受容性検証プラットフォーム
 - **GitHubリポジトリURL**: https://github.com/otomamayikuyorih/ai-consumer-research-simulator （連携予定）
-- **デプロイURL**: https://ai-consumer-research-121643671058.asia-northeast1.run.app （Cloud Runデプロイ予定）
+- **デプロイURL**: https://ai-consumer-research-simulator-121643671058.asia-northeast1.run.app
 - **デモ動画URL (YouTube)**: [登録予定]
 - **カテゴリ**: Agentic AI / マーケティング / ソーシャルサイエンス・意思決定支援
 
