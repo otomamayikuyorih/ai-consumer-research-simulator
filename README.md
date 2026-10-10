@@ -3,11 +3,14 @@
 **第5回 Agentic AI Hackathon with Google Cloud 提出プロジェクト**
 
 [![Google Cloud](https://img.shields.io/badge/Google_Cloud-Cloud_Run-4285F4?logo=google-cloud&logoColor=white)](https://cloud.google.com/run)
-[![Google Gemini](https://img.shields.io/badge/AI_Engine-Gemini_3.8_Flash-8E75B2?logo=google-gemini&logoColor=white)](https://ai.google.dev/)
+[![Google Gemini](https://img.shields.io/badge/AI_Engine-Gemini_3.5_Flash-8E75B2?logo=google-gemini&logoColor=white)](https://ai.google.dev/)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI_3.12-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/Frontend-React_18_TypeScript-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/UI-Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+- 🚀 **Cloud Run 本番デプロイURL**: https://ai-consumer-research-simulator-121643671058.asia-northeast1.run.app
+- 🎥 **YouTube デモ動画**: https://youtu.be/woaq9TT_Y5w
 
 ---
 
