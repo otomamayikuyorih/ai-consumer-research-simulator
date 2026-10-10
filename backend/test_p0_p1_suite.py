@@ -1,7 +1,7 @@
 """
 Comprehensive P0 & P1 Integration Test Suite
 Verifies:
-1. API Status and Model Configuration (Gemini 3.8 Flash)
+1. API Status and Model Configuration (Gemini 3.5 Flash)
 2. Consent Enforcement (P0-5: Rejection on consent_confirmed=False)
 3. Public Environment Protection (P0-6: Restrictions when RESTRICT_PUBLIC_DATA_MODIFICATION=True)
 4. A/B Experimentation with Counterbalancing & Rationale (P0-1: Presentation order in prompts & individual rationales)

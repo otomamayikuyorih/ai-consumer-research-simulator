@@ -179,7 +179,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </h2>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed max-w-3xl">
-              調査課題（リサーチゴール）を入力するだけで、<strong>①公的統計ペルソナ生成</strong> ➔ <strong>②設問票の自動設計</strong> ➔ <strong>③Gemini 3.8 Flashによる並行シミュレーション</strong> ➔ <strong>④多変量解析と戦略サマリー要約</strong> までエージェントが自律的に完遂します。
+              調査課題（リサーチゴール）を入力するだけで、<strong>①公的統計ペルソナ生成</strong> ➔ <strong>②設問票の自動設計</strong> ➔ <strong>③Gemini 3.5 Flashによる並行シミュレーション</strong> ➔ <strong>④多変量解析と戦略サマリー要約</strong> までエージェントが自律的に完遂します。
             </p>
           </div>
 
@@ -233,7 +233,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   }`}
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  Gemini 3.8 Flash
+                  Gemini 3.5 Flash
                 </button>
                 <button
                   type="button"

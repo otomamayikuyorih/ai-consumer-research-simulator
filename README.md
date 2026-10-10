@@ -24,7 +24,7 @@
 
 ## 🏗️ システムアーキテクチャ
 
-Google Cloud Run の完全サーバーレスコンテナ基盤上に、FastAPIバックエンドとReact SPAを統合ホスティング。Google Gemini 3.8 Flash / Vertex AI の高速並列推論基盤を活用し、高精度かつ低レイテンシ・ゼロアイドルコストを実現しています。
+Google Cloud Run の完全サーバーレスコンテナ基盤上に、FastAPIバックエンドとReact SPAを統合ホスティング。Google Gemini 3.5 Flash / Vertex AI の高速並列推論基盤を活用し、高精度かつ低レイテンシ・ゼロアイドルコストを実現しています。
 
 ![システムアーキテクチャ図](docs/system_architecture.png)
 
@@ -34,7 +34,7 @@ Google Cloud Run の完全サーバーレスコンテナ基盤上に、FastAPI�
 |---|---|---|
 | **フロントエンド** | React 18, TypeScript, Vite, Tailwind CSS, Plotly.js | 2階層ナビゲーション、即時多変量解析可視化、レスポンシブUI |
 | **実行基盤** | **Google Cloud Run** | 完全マネージドサーバーレスコンテナ、コールドスタート最小化、0〜N自動スケール |
-| **AI推論基盤** | **Google Gemini 3.8 Flash / Vertex AI** | 高速並列推論、構造化JSON Schema出力、定性生声の忠実抽出 |
+| **AI推論基盤** | **Google Gemini 3.5 Flash / Vertex AI** | 高速並列推論、構造化JSON Schema出力、定性生声の忠実抽出 |
 | **セキュリティ・認証** | **GCP Secret Manager** / 環境変数分離 | APIキー秘匿、個人情報マスク、セキュア実行 |
 | **ガバナンス・可観測性** | **Cloud Logging** / 同意管理・撤回API | 構造化JSONログ、推論トレーシング、実在被験者データ削除（GDPR/個人情報保護法準拠） |
 | **統計・機械学習** | pandas, scikit-learn, scipy, numpy | PCA（主成分分析）、K-Meansクラスタリング、カイ二乗検定、Cohen's d、t検定 |
@@ -67,9 +67,9 @@ flowchart TD
     User["リサーチャー（調査課題を入力）"] --> Orch["⚡ 自律型調査オーケストレーター<br/>(Goal-driven Autonomous Pipeline)"]
     subgraph Agents["自律型マルチエージェント協調フレームワーク"]
         Orch --> A1["1. 統計ペルソナ生成エージェント<br/>(公的統計多変量モンテカルロ)"]
-        Orch --> A2["2. 設問票自律設計エージェント<br/>(Gemini 3.8 Flash 調査票自動生成)"]
-        A1 & A2 --> A3["3. マルチエージェント並行回答エージェント<br/>(Gemini 3.8 Flash ペルソナ推論)"]
-        A3 --> A4["4. 多変量解析＆戦略サマリー要約エージェント<br/>(PCA/K-Means + Gemini 3.8 Flash)"]
+        Orch --> A2["2. 設問票自律設計エージェント<br/>(Gemini 3.5 Flash 調査票自動生成)"]
+        A1 & A2 --> A3["3. マルチエージェント並行回答エージェント<br/>(Gemini 3.5 Flash ペルソナ推論)"]
+        A3 --> A4["4. 多変量解析＆戦略サマリー要約エージェント<br/>(PCA/K-Means + Gemini 3.5 Flash)"]
         A1 --> A5["5. 仮想A/B実験エージェント<br/>(Nature 2026: 提示順Counterbalancing実推論)"]
         A3 --> A6["6. Zero-shot 頑健性検証エージェント<br/>(50/50折半サンプリング・MAE/RMSE客観測定)"]
         A1 --> A7["7. 1on1 定性深掘り対話エージェント<br/>(生活文脈適応マルチターン対話)"]
@@ -78,15 +78,15 @@ flowchart TD
 ```
 
 1. **自律型調査オーケストレーター (Autonomous Research Orchestrator Agent)**:
-   - 自然言語で調査課題を入力するだけで、[ペルソナ生成] ➔ [設問票自動設計] ➔ [Gemini 3.8 Flash並行回答] ➔ [多変量統計解析＆エグゼクティブサマリー要約] を一気通貫で自律連鎖実行。各ステップの実行状態・稼働モデル・所要時間(ms)・リトライ履歴を完全可観測化。
+   - 自然言語で調査課題を入力するだけで、[ペルソナ生成] ➔ [設問票自動設計] ➔ [Gemini 3.5 Flash並行回答] ➔ [多変量統計解析＆エグゼクティブサマリー要約] を一気通貫で自律連鎖実行。各ステップの実行状態・稼働モデル・所要時間(ms)・リトライ履歴を完全可観測化。
 2. **統計ペルソナ生成エージェント (Persona Synthesizer Agent)**:
    - 日本の国勢調査・就業構造基本調査・家計調査等の多変量結合確率分布に従い、非現実的な属性組み合わせ（例: 20代前半で世帯年収2000万の公務員等）を統計的に抑制しながら、100〜1,000人の生活者を自律生成。
 3. **インタビュー根拠化エージェント (AI4PB Grounding Agent - Mode C)**:
    - スタンフォード大学 AI4PB 研究に準拠し、実際のインタビュー記録（テキスト/CSV）から「7つの心理行動次元（価値観・消費行動・購買動機・価格感度・意思決定傾向・生活習慣・興味関心）」と「生の発言（Verbatim Quotes）」を忠実に抽出し、ペルソナの記憶基盤を構築。
 4. **自律回答推論エージェント (Survey Responding Agent)**:
-   - 各仮想生活者が独立した意思決定主体として行動。設問間の文脈・購買心理の一貫性を保持しながら、単一選択・複数選択・5段階評価・自由記述をGemini 3.8 Flashで並行推論。
+   - 各仮想生活者が独立した意思決定主体として行動。設問間の文脈・購買心理の一貫性を保持しながら、単一選択・複数選択・5段階評価・自由記述をGemini 3.5 Flashで並行推論。
 5. **仮想A/B実験エージェント (Virtual A/B RCT Agent - Nature 2026)**:
-   - Nature誌（2026年）の社会科学実験手法に準拠。Control条件とTreatment条件の提示順序によるバイアス（アンカリング効果）を相殺するため、エージェントごとに提示順をランダム化（Counterbalancing）しプロンプトにも提示順を明示注入。Gemini 3.8 Flashによる実ペルソナ評価と、効果量（Cohen's d）・対応のあるt検定を自律算出。ルールベース方式は明示的な「高速デモモード」として分離。
+   - Nature誌（2026年）の社会科学実験手法に準拠。Control条件とTreatment条件の提示順序によるバイアス（アンカリング効果）を相殺するため、エージェントごとに提示順をランダム化（Counterbalancing）しプロンプトにも提示順を明示注入。Gemini 3.5 Flashによる実ペルソナ評価と、効果量（Cohen's d）・対応のあるt検定を自律算出。ルールベース方式は明示的な「高速デモモード」として分離。
 6. **Zero-shot 折半サンプリング頑健性検証エージェント (Split-Half Robustness Agent)**:
    - 疑似乱数による誤差補正を完全排除。実測データがない場合や計算不能時は `N/A` を厳密返却。事後的なパラメータ最適化（校正）を行わないZero-shot推論であることを明記し、50/50折半サンプリングによって実測分布との一致度（MAE / RMSE / Pearson $r$）を客観測定。
 7. **1on1 定性深掘り対話エージェント (Qualitative Interview Agent)**:
@@ -133,7 +133,7 @@ pip install -r requirements.txt
 
 # Gemini APIキーを設定（未設定時はオフライン高精度統計シミュレーションモードで自動起動）
 export GEMINI_API_KEY="your-gemini-api-key"
-export GEMINI_MODEL="gemini-3.8-flash"
+export GEMINI_MODEL="gemini-3.5-flash"
 
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
@@ -177,7 +177,7 @@ gcloud run deploy ai-consumer-research-simulator \
   --cpu 1 \
   --min-instances 0 \
   --max-instances 5 \
-  --set-env-vars GEMINI_API_KEY="YOUR_GEMINI_API_KEY",GEMINI_MODEL="gemini-3.8-flash",GOOGLE_CLOUD_PROJECT="YOUR_PROJECT_ID",RESTRICT_PUBLIC_DATA_MODIFICATION="true"
+  --set-env-vars GEMINI_API_KEY="YOUR_GEMINI_API_KEY",GEMINI_MODEL="gemini-3.5-flash",GOOGLE_CLOUD_PROJECT="YOUR_PROJECT_ID",RESTRICT_PUBLIC_DATA_MODIFICATION="true"
 ```
 
 > [!TIP]
@@ -187,18 +187,18 @@ gcloud run deploy ai-consumer-research-simulator \
 
 ## 📊 主要機能一覧 (全10モジュール)
 
-1. **自律型調査オーケストレーター (Autonomous Pipeline)**: 自然言語で調査ゴールを入力するだけで、コホート生成 ➔ 設問設計 ➔ Gemini 3.8 Flash並行シミュレーション ➔ 多変量解析&戦略サマリー要約まで自律連鎖実行。各ステップのモデル名、稼働時間(ms)、リトライ履歴を可観測化。
+1. **自律型調査オーケストレーター (Autonomous Pipeline)**: 自然言語で調査ゴールを入力するだけで、コホート生成 ➔ 設問設計 ➔ Gemini 3.5 Flash並行シミュレーション ➔ 多変量解析&戦略サマリー要約まで自律連鎖実行。各ステップのモデル名、稼働時間(ms)、リトライ履歴を可観測化。
 2. **ダッシュボード & 公的統計検証**: システム全体の統計概要、ペルソナ属性分布、国勢調査等の公的統計ベンチマーク検証、直近調査・実験ステータスの一覧表示。
 3. **ペルソナ生成・検証**: 100〜1,000人の仮想生活者を3つの生成モード（Mode A: 人口統計 / Mode B: 合成リッチ / Mode C: 定性インタビュー根拠化）で自律生成。
 4. **アンケート作成**: 単一選択、複数選択、5段階評価尺度、自由記述形式の設問を自由自在にビジュアル設計。
-5. **調査シミュレーション**: 生成したペルソナ群に対し、Gemini 3.8 Flash を用いて超高速に並列回答シミュレーションを実行。
+5. **調査シミュレーション**: 生成したペルソナ群に対し、Gemini 3.5 Flash を用いて超高速に並列回答シミュレーションを実行。
 6. **結果解析・多変量解析**:
    - 単純集計、クロス集計、カイ二乗検定（有意水準判定）。
    - 主成分分析 (PCA) によるブランド・受容性知覚マップ散布図。
    - K-Means クラスタリングによる自動セグメンテーション。
    - 自由記述コメントの AI 要約・感情比率（ポジティブ/ニュートラル/ネガティブ）分析。
    - Excel対応 UTF-8 BOM付き個票生データ CSVダウンロード。
-7. **仮想A/B実験 (Nature 2026)**: Control / Treatment 条件の提示順序をランダム化（Counterbalancing）しプロンプトにも提示順を明示。Gemini 3.8 Flash実ペルソナ推論により、平均差・割合差・効果量（Cohen's d）・対応のあるt検定を有意差検定。
+7. **仮想A/B実験 (Nature 2026)**: Control / Treatment 条件の提示順序をランダム化（Counterbalancing）しプロンプトにも提示順を明示。Gemini 3.5 Flash実ペルソナ推論により、平均差・割合差・効果量（Cohen's d）・対応のあるt検定を有意差検定。
 8. **Zero-shot 折半サンプリング頑健性検証 (Human-AI Validation)**: 疑似乱数誤差を全廃。実在アンケートデータを 50/50 に折半分割し、事後校正のないZero-shot推論による MAE、RMSE、Pearson 相関係数 $r$ で AI シミュレーションの予測精度を厳密客観評価。
 9. **AIインタビュー (1on1 Deep Talk)**: アンケート回答者の中から気になるペルソナを選択し、1対1で理由や生活背景を深掘りチャット。
 10. **コンセプト評価 (商品受容性テスト)**: 新商品コンセプト案・価格・説明文を入力し、購入意向・価格受容性・利用シーン・改善提案を自動出力。

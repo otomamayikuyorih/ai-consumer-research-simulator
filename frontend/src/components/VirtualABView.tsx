@@ -348,7 +348,7 @@ export const VirtualABView: React.FC<VirtualABViewProps> = ({
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                Gemini 3.8 Flash (実推論)
+                Gemini 3.5 Flash (実推論)
               </button>
               <button
                 type="button"
@@ -402,7 +402,7 @@ export const VirtualABView: React.FC<VirtualABViewProps> = ({
             {isRunning ? (
               <>
                 <RotateCcw className="w-4 h-4 animate-spin" />
-                {executionEngine === 'gemini' ? 'Gemini 3.8 Flash でペルソナ推論中...' : '相関シミュレーション実行中...'}
+                {executionEngine === 'gemini' ? 'Gemini 3.5 Flash でペルソナ推論中...' : '相関シミュレーション実行中...'}
               </>
             ) : (
               <>
@@ -428,7 +428,7 @@ export const VirtualABView: React.FC<VirtualABViewProps> = ({
                   {currentExperiment.results.engine_type === 'gemini_agent' ? (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
                       <Sparkles className="w-3 h-3 text-indigo-600" />
-                      Gemini 3.8 Flash 実ペルソナ推論モード
+                      Gemini 3.5 Flash 実ペルソナ推論モード
                     </span>
                   ) : (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">

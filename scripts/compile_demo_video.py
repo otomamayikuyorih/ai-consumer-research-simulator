@@ -1,7 +1,7 @@
 """
 AI Consumer Research Simulator - Demo Video Slide Renderer & Video Compiler (Upgraded 2026)
 Generates 1080p slide images, pairs with Haruka TTS audio, and encodes submission/demo_video.mp4 with ffmpeg.
-Includes Autonomous Research Orchestrator, Gemini 3.8 Flash, Nature 2026 RCT, and AI4PB Robustness.
+Includes Autonomous Research Orchestrator, Gemini 3.5 Flash, Nature 2026 RCT, and AI4PB Robustness.
 """
 
 import os
@@ -56,9 +56,9 @@ SCENES = [
     {
         "id": "scene04",
         "title": "完全可観測性 (Provenance) ＆ 戦略提言エグゼクティブサマリー",
-        "subtitle": "稼働モデル・処理時間(ms)・リトライ履歴の可視化とGemini 3.8 Flashによる戦略提言",
+        "subtitle": "稼働モデル・処理時間(ms)・リトライ履歴の可視化とGemini 3.5 Flashによる戦略提言",
         "tag": "04 / OBSERVABILITY & SUMMARY",
-        "text": "各ステップの稼働モデルや処理時間、リトライ履歴は完全可観測化されており、わずか数十秒でGemini 3.8 Flashによる戦略提言エグゼクティブサマリーまで自動で導出されます。",
+        "text": "各ステップの稼働モデルや処理時間、リトライ履歴は完全可観測化されており、わずか数十秒でGemini 3.5 Flashによる戦略提言エグゼクティブサマリーまで自動で導出されます。",
         "type": "orchestrator_summary",
     },
     {
@@ -80,9 +80,9 @@ SCENES = [
     {
         "id": "scene07",
         "title": "Nature 2026準拠 仮想A/Bランダム化実験 (RCT)",
-        "subtitle": "提示順序ランダム化(Counterbalancing)でバイアス相殺・Gemini 3.8 Flash実推論でCohen's d算出",
+        "subtitle": "提示順序ランダム化(Counterbalancing)でバイアス相殺・Gemini 3.5 Flash実推論でCohen's d算出",
         "tag": "07 / VIRTUAL A/B EXPERIMENT",
-        "text": "仮想A/B実験では、Nature 2026年論文に準拠し、提示順序によるバイアスを相殺するランダム化プロンプトを注入。Gemini 3.8 Flashによる実ペルソナ推論で、効果量と有意差を算出します。",
+        "text": "仮想A/B実験では、Nature 2026年論文に準拠し、提示順序によるバイアスを相殺するランダム化プロンプトを注入。Gemini 3.5 Flashによる実ペルソナ推論で、効果量と有意差を算出します。",
         "type": "ab_experiment",
     },
     {
@@ -104,9 +104,9 @@ SCENES = [
     {
         "id": "scene10",
         "title": "Google Cloud サーバーレス構成 ＆ まとめ",
-        "subtitle": "Cloud Run ＋ Gemini 3.8 Flash によるゼロアイドルコスト ＆ 完全オンデマンド推論",
+        "subtitle": "Cloud Run ＋ Gemini 3.5 Flash によるゼロアイドルコスト ＆ 完全オンデマンド推論",
         "tag": "10 / ARCHITECTURE & SUMMARY",
-        "text": "Google Cloud Run の完全サーバーレスコンテナと Gemini 3.8 Flash の高速推論により、ゼロアイドルコストと高スケーラビリティを両立しました。生活者の声を科学する次世代AIエージェント、AI Consumer Research Simulator です。ご視聴ありがとうございました。",
+        "text": "Google Cloud Run の完全サーバーレスコンテナと Gemini 3.5 Flash の高速推論により、ゼロアイドルコストと高スケーラビリティを両立しました。生活者の声を科学する次世代AIエージェント、AI Consumer Research Simulator です。ご視聴ありがとうございました。",
         "type": "summary",
     },
 ]
@@ -170,9 +170,9 @@ def render_base_slide(sc):
     draw.rounded_rectangle([(1430, 32), (1640, 78)], radius=8, fill=(66, 133, 244))
     draw.text((1445, 42), "☁ Cloud Run", font=get_font(FONT_BOLD_PATH, 22), fill=(255, 255, 255))
 
-    # Gemini 3.8 Flash Badge
+    # Gemini 3.5 Flash Badge
     draw.rounded_rectangle([(1660, 32), (1860, 78)], radius=8, fill=(142, 117, 178))
-    draw.text((1675, 42), "✦ Gemini 3.8", font=get_font(FONT_BOLD_PATH, 22), fill=(255, 255, 255))
+    draw.text((1675, 42), "✦ Gemini 3.5", font=get_font(FONT_BOLD_PATH, 22), fill=(255, 255, 255))
 
     # Bottom Subtitle Area (Lower Third)
     draw.rectangle([(0, 920), (1920, 1080)], fill=(10, 15, 29))
@@ -215,7 +215,7 @@ def render_scene(sc):
 
         props = [
             ("📊 公的統計準拠ペルソナ", "日本の国勢調査・家計調査相関\n100〜1,000人規模の生活者自律生成\n属性の非現実な組み合わせを排除"),
-            ("⚡ 自律オーケストレーター", "Gemini 3.8 Flash による4工程自律連鎖\n設問設計・並行推論・多変量解析\n戦略提言サマリーまで数十秒で自動導出"),
+            ("⚡ 自律オーケストレーター", "Gemini 3.5 Flash による4工程自律連鎖\n設問設計・並行推論・多変量解析\n戦略提言サマリーまで数十秒で自動導出"),
             ("🔬 AI4PB ＆ Nature 2026", "順序ランダム化 仮想A/B実験 (RCT)\nCohen's d 効果量 ＆ t検定\n疑似乱数全廃のZero-shot頑健性検証")
         ]
         for i, (p_title, p_desc) in enumerate(props):
@@ -228,7 +228,7 @@ def render_scene(sc):
         draw.rounded_rectangle([(120, 670), (1740, 840)], radius=12, fill=(24, 33, 47), outline=(56, 189, 248), width=2)
         draw.text((150, 700), "🏆 第5回 Agentic AI Hackathon with Google Cloud 提出プロジェクト", font=get_font(FONT_BOLD_PATH, 24), fill=(56, 189, 248))
         draw.text((150, 745), "• 実行基盤: Google Cloud Run 完全サーバーレスコンテナ (東京リージョン / ゼロアイドルコスト)", font=f_body, fill=(226, 232, 240))
-        draw.text((150, 785), "• AI基盤: Google Gemini 3.8 Flash / Vertex AI Model Garden ＆ 完全マネージド多変量解析", font=f_body, fill=(226, 232, 240))
+        draw.text((150, 785), "• AI基盤: Google Gemini 3.5 Flash / Vertex AI Model Garden ＆ 完全マネージド多変量解析", font=f_body, fill=(226, 232, 240))
 
     elif stype == "problem_solution":
         w = 870
@@ -255,7 +255,7 @@ def render_scene(sc):
 
         sol_items = [
             ("⚡ 自律オーケストレーターで全自動完結", "ゴール指定のみでペルソナ生成・アンケート実査・多変量解析・提言まで即座に実行。"),
-            ("🪙 コストはクラウド実行費用の数円のみ", "Cloud Run のゼロアイドルコストと Gemini 3.8 Flash の高速推論でコストを99%削減。"),
+            ("🪙 コストはクラウド実行費用の数円のみ", "Cloud Run のゼロアイドルコストと Gemini 3.5 Flash の高速推論でコストを99%削減。"),
             ("🎯 公的統計準拠のリアルな相関", "国勢調査・家計調査等の多変量確率分布に従い、非現実な属性組み合わせを自動抑制。"),
             ("🔬 AI4PB ＆ Nature 2026 学術的実証", "生声グラウンディング、RCT順序ランダム化、Zero-shot折半頑健性検証で客観性を担保。")
         ]
@@ -278,7 +278,7 @@ def render_scene(sc):
         steps = [
             ("Step 1", "統計ペルソナ生成", "国勢調査等の公的統計から\n属性相関を保持した\n50〜100名の生活者を合成", (59, 130, 246)),
             ("Step 2", "設問構造自律設計", "調査目的に最適化された\n単一/5段階/自由記述の\nアンケート設問を即時生成", (168, 85, 247)),
-            ("Step 3", "高速並行回答推論", "Gemini 3.8 Flash が\n生活背景・心理バイアスを\n忠実に再現し並行回答", (16, 185, 129)),
+            ("Step 3", "高速並行回答推論", "Gemini 3.5 Flash が\n生活背景・心理バイアスを\n忠実に再現し並行回答", (16, 185, 129)),
             ("Step 4", "多変量解析・戦略提言", "PCA・K-Meansクラスタ・\nカイ二乗検定・感情分析から\n戦略提言サマリーを自動導出", (245, 158, 11))
         ]
         for s_idx, (s_tag, s_name, s_desc, s_clr) in enumerate(steps):
@@ -312,8 +312,8 @@ def render_scene(sc):
         prov_items = [
             ("Step 1: 統計ペルソナ生成", "モデル: e-Stat / 国勢調査 結合確率モデル\n所要時間: 34 ms / リトライ: 0回 / 状態: COMPLETED"),
             ("Step 2: 設問構造自律設計", "モデル: structured_survey_template\n所要時間: 8 ms / リトライ: 0回 / 状態: COMPLETED"),
-            ("Step 3: 高速並行回答推論", "モデル: heuristic_statistical_model / Gemini 3.8\n所要時間: 16 ms / 標本数: 50名 / 状態: COMPLETED"),
-            ("Step 4: 多変量解析・戦略提言", "モデル: scikit-learn + gemini-3.8-flash\n所要時間: 154 ms / 次元削減PCA + クラスタリング")
+            ("Step 3: 高速並行回答推論", "モデル: heuristic_statistical_model / Gemini 3.5\n所要時間: 16 ms / 標本数: 50名 / 状態: COMPLETED"),
+            ("Step 4: 多変量解析・戦略提言", "モデル: scikit-learn + gemini-3.5-flash\n所要時間: 154 ms / 次元削減PCA + クラスタリング")
         ]
         for p_idx, (p_h, p_b) in enumerate(prov_items):
             py = 310 + p_idx * 130
@@ -323,7 +323,7 @@ def render_scene(sc):
 
         # Right: Executive Summary
         draw.rounded_rectangle([(940, 220), (1760, 850)], radius=12, fill=(15, 23, 42), outline=(34, 197, 94), width=2)
-        draw.text((970, 250), "📑 自律導出されたエグゼクティブサマリー (Gemini 3.8 Flash)", font=f_bold, fill=(134, 239, 172))
+        draw.text((970, 250), "📑 自律導出されたエグゼクティブサマリー (Gemini 3.5 Flash)", font=f_bold, fill=(134, 239, 172))
 
         exec_items = [
             ("💡 主要発見 (Key Findings)", "• 30〜40代タイパ重視層で78%が好意的な購入意向を示した。\n• 月額980円のサブスク価格設定は「妥当〜割安」と評価。\n• 一方で50代以上では「充電の手間」と「初期設定の不安」が懸念。"),
@@ -402,7 +402,7 @@ def render_scene(sc):
         draw.text((990, 310), "• 価格: 34,800円 (+5,000円プレミアム)\n• 訴求: 「AIパーソナル健康コーチ機能搭載」\n• 平均購入意向スコア: 3.86 / 5.00\n• 肯定的回答率: 68.0%", font=f_body, fill=(187, 247, 208), spacing=12)
 
         draw.rounded_rectangle([(100, 610), (1760, 850)], radius=12, fill=(15, 23, 42), outline=(56, 189, 248), width=2)
-        draw.text((130, 640), "🔬 Nature 2026 手法によるバイアス相殺 ＆ Gemini 3.8 Flash 実ペルソナ推論", font=f_bold, fill=(56, 189, 248))
+        draw.text((130, 640), "🔬 Nature 2026 手法によるバイアス相殺 ＆ Gemini 3.5 Flash 実ペルソナ推論", font=f_bold, fill=(56, 189, 248))
         draw.text((130, 685), "1. 提示順ランダム化 (Counterbalancing): Control➔Treatment と Treatment➔Control を50:50でプロンプト注入", font=f_body, fill=(226, 232, 240))
         draw.text((130, 730), "2. 個別回答理由の記録: ペルソナ固有の生活背景に根ざした「なぜその選択をしたか」を完全トラッキング", font=f_bold, fill=(134, 239, 172))
         draw.text((130, 775), "3. 効果量 (Cohen's d = 0.74) ＆ 対応のあるt検定 (t = 4.88, p < 0.001): 統計的有意差を確認", font=f_bold, fill=(34, 197, 94))
@@ -476,7 +476,7 @@ def render_scene(sc):
         
         arch_pts = [
             ("Google Cloud Run", "完全サーバーレスコンテナ。待機時インスタンス0（完全無料）から\nリクエストに応じてミリ秒で自動スケール。"),
-            ("Google Gemini 3.8 Flash", "次世代フラッグシップ高速推論モデル。マルチエージェントの大量並列処理を\n低遅延かつ高スループットで実現。"),
+            ("Google Gemini 3.5 Flash", "次世代フラッグシップ高速推論モデル。マルチエージェントの大量並列処理を\n低遅延かつ高スループットで実現。"),
             ("フルスタック統合コンテナ", "FastAPI バックエンド ＆ React 18 SPA をマルチステージビルドで1コンテナ化。\nデプロイとバージョン管理を極小化。"),
             ("堅牢なガバナンスと運用性", "Cloud Logging、同意管理API、公開環境保護、公的統計バリデーションの統合。")
         ]

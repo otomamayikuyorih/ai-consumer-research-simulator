@@ -39,12 +39,8 @@ def get_gemini_client(prefer_model: Optional[str] = None) -> Tuple[Optional[gena
             location = settings.GOOGLE_CLOUD_LOCATION or "asia-northeast1"
             client = genai.Client(vertexai=True, project=project_id, location=location)
 
-            # Vertex AI asia-northeast1 では gemini-2.5-flash が実稼働モデル (gemini-3.8-flashは404となるため自動解決)
-            if "3.8" in target_model or target_model == "gemini-3.8-flash":
-                resolved_model = "gemini-2.5-flash"
-            else:
-                resolved_model = target_model
-
+            # Vertex AI asia-northeast1 では gemini-3.5-flash が実稼働・利用可能
+            resolved_model = target_model
             return client, "vertex_ai", resolved_model, None
         except Exception as e:
             logger.warning(f"Failed to initialize Vertex AI client: {e}")
@@ -91,17 +87,9 @@ async def call_gemini_json_with_tracking(
             config=config
         )
     except Exception as api_err:
-        # Vertex AI等でモデルが404となった場合のフォールバック試行 (例: 3.8 -> 2.5-flash)
-        if "404" in str(api_err) and model != "gemini-2.5-flash":
-            logger.warning(f"Model {model} returned 404, falling back to gemini-2.5-flash: {api_err}")
-            model = "gemini-2.5-flash"
-            response = client.models.generate_content(
-                model=model,
-                contents=prompt,
-                config=config
-            )
-        else:
-            raise api_err
+        logger.error(f"Gemini API JSON call failed for model {model}: {api_err}")
+        raise api_err
+
 
     duration_ms = int((time.time() - t_start) * 1000)
 
@@ -158,16 +146,9 @@ async def call_gemini_text_with_tracking(
             config=config
         )
     except Exception as api_err:
-        if "404" in str(api_err) and model != "gemini-2.5-flash":
-            logger.warning(f"Model {model} returned 404, falling back to gemini-2.5-flash: {api_err}")
-            model = "gemini-2.5-flash"
-            response = client.models.generate_content(
-                model=model,
-                contents=prompt,
-                config=config
-            )
-        else:
-            raise api_err
+        logger.error(f"Gemini API text call failed for model {model}: {api_err}")
+        raise api_err
+
 
     duration_ms = int((time.time() - t_start) * 1000)
 
