@@ -44,6 +44,8 @@ export const VirtualABView: React.FC<VirtualABViewProps> = ({
   const [treatmentAd, setTreatmentAd] = useState('美しい髪と、美しい地球のために。毎日使うものから、未来を変える。');
 
   const [orderDesign, setOrderDesign] = useState<'counterbalanced' | 'randomized'>('counterbalanced');
+  const [executionEngine, setExecutionEngine] = useState<'gemini' | 'mock'>('gemini');
+  const [sampleSize, setSampleSize] = useState<number>(30);
   const [isRunning, setIsRunning] = useState(false);
   const [currentExperiment, setCurrentExperiment] = useState<VirtualABExperiment | null>(null);
   const [pastExperiments, setPastExperiments] = useState<any[]>([]);
@@ -121,8 +123,12 @@ export const VirtualABView: React.FC<VirtualABViewProps> = ({
           ad_copy: treatmentAd,
         },
         order_design: orderDesign,
-        use_mock: false,
-      });
+        use_mock: executionEngine === 'mock',
+        sample_size: sampleSize,
+      } as any);
+      if (exp.status === 'mock_fallback_warning') {
+        alert(exp.warning || 'Gemini API実行エラーのためモックにフォールバックしました');
+      }
       setCurrentExperiment(exp);
       setPastExperiments((prev) => [exp, ...prev]);
     } catch (err: any) {
@@ -327,6 +333,61 @@ export const VirtualABView: React.FC<VirtualABViewProps> = ({
           </div>
         </div>
 
+        {/* Execution Mode & Sample Size Setting */}
+        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-800 mb-1">推論エンジンモード</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setExecutionEngine('gemini')}
+                className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 border transition-all ${
+                  executionEngine === 'gemini'
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Gemini 3.8 Flash (実推論)
+              </button>
+              <button
+                type="button"
+                onClick={() => setExecutionEngine('mock')}
+                className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 border transition-all ${
+                  executionEngine === 'mock'
+                    ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                <Sliders className="w-3.5 h-3.5" />
+                ルールベース (デモモード)
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-1">
+              {executionEngine === 'gemini' 
+                ? '提示順序（Counterbalancing）をプロンプトに注入し、ペルソナごとに自律推論します'
+                : 'APIを消費せず高速に統計相関モデルで模擬評価します（デモ用）'}
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-800 mb-1">実験サンプルサイズ (N数)</label>
+            <select
+              value={sampleSize}
+              onChange={(e) => setSampleSize(Number(e.target.value))}
+              className="w-full text-xs px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-800 font-semibold"
+            >
+              <option value={20}>20名（クイック検証・高速）</option>
+              <option value={30}>30名（推奨バランス）</option>
+              <option value={50}>50名（標準統計検定）</option>
+              <option value={100}>100名（高精度検出力）</option>
+            </select>
+            <p className="text-[11px] text-slate-500 mt-1">
+              コホートから無作為抽出したペルソナに対してA/B提示順序を均等割付します
+            </p>
+          </div>
+        </div>
+
         {/* Action Button */}
         <div className="flex items-center justify-between pt-2">
           <div className="text-xs text-slate-500 flex items-center gap-1.5">
@@ -341,7 +402,7 @@ export const VirtualABView: React.FC<VirtualABViewProps> = ({
             {isRunning ? (
               <>
                 <RotateCcw className="w-4 h-4 animate-spin" />
-                A/B実験シミュレーション実行中...
+                {executionEngine === 'gemini' ? 'Gemini 3.8 Flash でペルソナ推論中...' : '相関シミュレーション実行中...'}
               </>
             ) : (
               <>
@@ -360,15 +421,33 @@ export const VirtualABView: React.FC<VirtualABViewProps> = ({
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-100 gap-4">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  RCT 結果サマリー (N={currentExperiment.results.sample_size})
-                </span>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    RCT 結果サマリー (N={currentExperiment.results.sample_size})
+                  </span>
+                  {currentExperiment.results.engine_type === 'gemini_agent' ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-indigo-600" />
+                      Gemini 3.8 Flash 実ペルソナ推論モード
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
+                      <Sliders className="w-3 h-3 text-amber-600" />
+                      ルールベース・デモモード（相関シミュレーション）
+                    </span>
+                  )}
+                </div>
                 <h3 className="text-base font-bold text-slate-900 mt-1">
                   {currentExperiment.title}
                 </h3>
                 <p className="text-xs text-slate-500">
-                  提示順序設計: {currentExperiment.order_design === 'counterbalanced' ? 'カウンターバランス法 (50:50)' : '完全ランダム提示'}
+                  提示順序設計: {currentExperiment.order_design === 'counterbalanced' ? 'カウンターバランス法 (50:50割付・プロンプト順序反映)' : '完全ランダム提示'}
                 </p>
+                {currentExperiment.results.fallback_warning && (
+                  <div className="mt-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 font-semibold">
+                    {currentExperiment.results.fallback_warning}
+                  </div>
+                )}
               </div>
 
               <a
@@ -535,6 +614,66 @@ export const VirtualABView: React.FC<VirtualABViewProps> = ({
                       ))}
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Individual Responses Table (Order & Reasons) */}
+            {currentExperiment.results.individual_responses && currentExperiment.results.individual_responses.length > 0 && (
+              <div className="mt-8 pt-6 border-t border-slate-200 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <FlaskConical className="w-4 h-4 text-emerald-600" />
+                    ペルソナ別・提示順序と個別評価理由（抜粋）
+                  </h4>
+                  <span className="text-[11px] text-slate-500">
+                    表示: 先頭 {Math.min(10, currentExperiment.results.individual_responses.length)} 件 / 全 {currentExperiment.results.individual_responses.length} 件
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                  <table className="min-w-full text-xs text-left">
+                    <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                      <tr>
+                        <th className="py-2.5 px-3">ペルソナ</th>
+                        <th className="py-2.5 px-3">属性</th>
+                        <th className="py-2.5 px-3">提示順序</th>
+                        <th className="py-2.5 px-3">Control評価</th>
+                        <th className="py-2.5 px-3">Treatment評価</th>
+                        <th className="py-2.5 px-3">Δ購入意向</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 bg-white">
+                      {currentExperiment.results.individual_responses.slice(0, 10).map((r: any, idx: number) => (
+                        <tr key={idx} className="hover:bg-slate-50">
+                          <td className="py-2.5 px-3 font-mono font-medium text-slate-800 whitespace-nowrap">
+                            {r.persona_code}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">
+                            {r.age_group} {r.gender} ({r.values_segment})
+                          </td>
+                          <td className="py-2.5 px-3 whitespace-nowrap">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                              {r.presentation_order === 'control_first' ? 'Control → Treatment' : 'Treatment → Control'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 max-w-[200px]">
+                            <div className="font-bold text-slate-900">{r.control_purchase_intent}点</div>
+                            <div className="text-[11px] text-slate-500 truncate" title={r.control_reason}>{r.control_reason || '-'}</div>
+                          </td>
+                          <td className="py-2.5 px-3 max-w-[200px]">
+                            <div className="font-bold text-indigo-700">{r.treatment_purchase_intent}点</div>
+                            <div className="text-[11px] text-slate-500 truncate" title={r.treatment_reason}>{r.treatment_reason || '-'}</div>
+                          </td>
+                          <td className="py-2.5 px-3 font-bold whitespace-nowrap">
+                            <span className={r.delta_intent > 0 ? 'text-emerald-600' : r.delta_intent < 0 ? 'text-rose-600' : 'text-slate-500'}>
+                              {r.delta_intent > 0 ? `+${r.delta_intent}` : r.delta_intent}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}

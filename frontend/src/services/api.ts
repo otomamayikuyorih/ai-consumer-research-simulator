@@ -289,3 +289,28 @@ export async function fetchValidations(surveyId?: string): Promise<any[]> {
   if (!res.ok) throw new Error('Failed to list validations');
   return res.json();
 }
+
+// 自律調査オーケストレーター (Agentic Orchestrator)
+export async function fetchOrchestratorPresets(): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/orchestrator/presets`);
+  if (!res.ok) throw new Error('Failed to fetch orchestrator presets');
+  return res.json();
+}
+
+export async function runAutonomousOrchestration(params: {
+  research_goal: string;
+  target_count?: number;
+  generation_mode?: 'mode_a' | 'mode_b' | 'mode_c';
+  use_mock?: boolean;
+}): Promise<any> {
+  const res = await fetch(`${API_BASE}/orchestrator/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.detail || '自律調査パイプラインの実行に失敗しました');
+  }
+  return res.json();
+}

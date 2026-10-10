@@ -200,10 +200,15 @@ export interface VirtualABExperiment {
     ad_copy?: string;
   };
   order_design: string;
+  status?: string;
+  warning?: string;
   results: {
     title: string;
     sample_size: number;
     order_design: string;
+    engine_type?: string;
+    is_demo_mode?: boolean;
+    fallback_warning?: string;
     metric_analysis: Record<string, {
       control_mean: number;
       treatment_mean: number;
@@ -220,7 +225,8 @@ export interface VirtualABExperiment {
       by_age: Record<string, any>;
       by_values: Record<string, any>;
     };
-    individual_results: any[];
+    individual_results?: any[];
+    individual_responses?: any[];
     simulation_disclaimer: string;
     academic_reference?: any;
   };
@@ -237,6 +243,7 @@ export interface HumanAIValidation {
     status: string;
     is_demo_dataset: boolean;
     dataset_notice: string;
+    scientific_transparency_notice?: string;
     human_sample_size: number;
     ai_sample_size: number;
     split_info: {
@@ -254,6 +261,8 @@ export interface HumanAIValidation {
       calibration_split: any;
       test_evaluation_split: any;
       generalization_notes: string;
+      scientific_interpretation?: string;
+      calibration_performed?: boolean;
     };
     subgroup_errors: Record<string, any>;
     individual_concordance: {

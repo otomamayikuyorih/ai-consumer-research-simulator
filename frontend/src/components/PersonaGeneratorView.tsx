@@ -181,7 +181,7 @@ export const PersonaGeneratorView: React.FC<PersonaGeneratorViewProps> = ({
         name: newDatasetName,
         source_type: 'text',
         raw_content: newDatasetContent,
-        consent_confirmed: true,
+        consent_confirmed: consentConfirmed,
         is_demo: false,
       });
       alert(`インタビューデータセット『${created.name}』を登録・抽出しました（参加者数: ${created.participant_count}名）`);

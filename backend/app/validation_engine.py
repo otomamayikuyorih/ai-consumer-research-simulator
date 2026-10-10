@@ -3,7 +3,7 @@ import io
 import json
 import logging
 import math
-from typing import Any
+from typing import Any, Optional
 import numpy as np
 from scipy import stats
 
@@ -15,7 +15,7 @@ def generate_demo_human_survey_data(questions: list[dict[str, Any]], count: int 
     np.random.seed(123)
 
     for i in range(count):
-        p_id = f"HUMAN-{i+1:04d}"
+        p_id = f"DEMO-HUMAN-{i+1:04d}"
         age = int(np.random.randint(20, 75))
         age_group = f"{age // 10 * 10}代" if age < 70 else "70代以上"
         gender = "男性" if np.random.random() < 0.49 else "女性"
@@ -27,10 +27,9 @@ def generate_demo_human_survey_data(questions: list[dict[str, Any]], count: int 
             options = q.get("options", [])
 
             if q_type == "single":
-                # 人間の回答分布（少し偏りをもたせる）
                 if options:
                     probs = np.ones(len(options))
-                    probs[0] += 0.5 # 最初の選択肢に少し集中
+                    probs[0] += 0.5
                     probs = probs / np.sum(probs)
                     answers[q_id] = str(np.random.choice(options, p=probs))
             elif q_type == "multiple":
@@ -42,11 +41,10 @@ def generate_demo_human_survey_data(questions: list[dict[str, Any]], count: int 
                     selected.append(options[0])
                 answers[q_id] = selected
             elif q_type == "scale5":
-                # 3前後の正規分布
                 score = int(np.clip(round(np.random.normal(3.1, 0.9)), 1, 5))
                 answers[q_id] = score
             elif q_type == "text":
-                answers[q_id] = "（実測調査自由回答サンプル）価格とサポート体制に納得できれば購入を前向きに考えたいと思います。"
+                answers[q_id] = "（実測デモ回答サンプル）価格とサポート体制に納得できれば購入を前向きに考えたいと思います。"
 
         records.append({
             "participant_id": p_id,
@@ -73,7 +71,6 @@ def parse_human_csv_data(csv_text: str, questions: list[dict[str, Any]]) -> list
         answers = {}
         for q in questions:
             q_id = q["id"]
-            # カラム名で q_id または 設問テキスト、q1などを検索
             val = row.get(q_id) or row.get(q.get("text", "")) or row.get(f"q{idx+1}")
             if val is not None:
                 if q["type"] == "scale5":
@@ -86,7 +83,6 @@ def parse_human_csv_data(csv_text: str, questions: list[dict[str, Any]]) -> list
                 else:
                     answers[q_id] = str(val).strip()
             else:
-                # デフォルト
                 answers[q_id] = q["options"][0] if q.get("options") else 3
 
         records.append({
@@ -105,59 +101,101 @@ def evaluate_human_ai_validation(
     questions: list[dict[str, Any]],
     split_ratio: str = "50_50_split"
 ) -> dict[str, Any]:
-    """Human vs AI 回答の比較検証エンジン（MAE, RMSE, Pearson相関, キャリブレーション/テスト分割）"""
+    """Human vs AI 回答の比較検証エンジン
+    
+    【科学的信頼性の改善】
+    - 疑似乱数による誤差捏造を完全排除（計算不能時はNone/NAを返却）
+    - 実際のプロンプト校正がない場合は「校正済み・汎化検証済み」と謳わず、
+      「Zero-shot折半サンプリング頑健性検証（Split-Half Robustness）」として透明に提示
+    """
     if not human_records or not ai_responses:
         return {
             "status": "unvalidated",
-            "message": "実測データまたはAI回答データが存在しません。検証は未完了です。"
+            "message": "実測データまたはAI回答データが存在しません。検証は未完了（N/A）です。",
+            "overall_metrics": {
+                "overall_mae": None,
+                "overall_rmse": None,
+                "pearson_r": None,
+                "question_level": {}
+            },
+            "split_half_evaluation": None,
+            "subgroup_errors": {}
         }
 
     n_ai = len(ai_responses)
     n_human = len(human_records)
     is_demo = any(r.get("is_demo", False) for r in human_records)
 
-    # 1. 訓練/キャリブレーション用とテスト/評価用のデータセット分割 (Out-of-sample評価)
+    # 1. サンプリング折半分割 (Split-half sampling)
     np.random.seed(42)
     indices = np.random.permutation(n_human)
     split_point = n_human // 2 if split_ratio == "50_50_split" else int(n_human * 0.7)
 
-    calibration_human = [human_records[i] for i in indices[:split_point]]
-    test_human = [human_records[i] for i in indices[split_point:]]
+    split1_human = [human_records[i] for i in indices[:split_point]]
+    split2_human = [human_records[i] for i in indices[split_point:]]
 
-    # 全体、キャリブレーション、テストそれぞれでの精度評価
     overall_metrics = compute_distribution_metrics(ai_responses, human_records, questions)
-    calibration_metrics = compute_distribution_metrics(ai_responses, calibration_human, questions)
-    test_metrics = compute_distribution_metrics(ai_responses, test_human, questions)
+    split1_metrics = compute_distribution_metrics(ai_responses, split1_human, questions) if split1_human else None
+    split2_metrics = compute_distribution_metrics(ai_responses, split2_human, questions) if split2_human else None
 
-    # 属性別予測誤差（年代別、性別別 MAE）
+    # 属性別予測誤差（実計算のみ・乱数排除）
     subgroup_errors = compute_subgroup_errors(ai_responses, human_records, questions)
 
-    # 個人単位の一致率（participant_id または persona_code が 1対1 対応する場合のみ）
+    # 個人単位の一致率
     individual_concordance = compute_individual_match(ai_responses, human_records, questions)
+
+    # 折半誤差の差分（ロバストネス指標）
+    mae_gap = None
+    if split1_metrics and split2_metrics:
+        m1 = split1_metrics.get("overall_mae")
+        m2 = split2_metrics.get("overall_mae")
+        if m1 is not None and m2 is not None:
+            mae_gap = round(abs(m2 - m1), 3)
 
     return {
         "status": "completed",
         "is_demo_dataset": is_demo,
-        "dataset_notice": "【注意】本比較はデモ用の架空実測データに基づいています。実在の人間の結果ではありません。" if is_demo else "実測アンケートデータに基づく実証比較結果です。",
+        "dataset_notice": "【注意】本検証はデモ用の架空実測データに基づいています。実在の人間の結果ではありません。" if is_demo else "実測アンケートデータに基づく実証比較結果です。",
         "human_sample_size": n_human,
         "ai_sample_size": n_ai,
+        "calibration_performed": False,
+        "evaluation_type": "zero_shot_split_half",
+        "evaluation_type_label": "Zero-shot 折半サンプリング頑健性検証 (Split-Half Robustness)",
+        "scientific_notice": (
+            "【科学的透明性の注記】本システムは事後的なプロンプト過学習やパラメータ調整（キャリブレーション）を行わないZero-Shot推論エージェントです。"
+            "したがって本50/50分割は『校正済みモデルの未知データ汎化性能』ではなく、人間回答データのサンプリングばらつきに対するZero-shot予測のロバストネス（安定性）を客観検証するものです。"
+        ),
         "split_info": {
             "mode": split_ratio,
-            "calibration_sample_size": len(calibration_human),
-            "test_sample_size": len(test_human)
+            "split_1_sample_size": len(split1_human),
+            "split_2_sample_size": len(split2_human)
         },
         "overall_metrics": overall_metrics,
+        "split_half_evaluation": {
+            "split_1_metrics": split1_metrics,
+            "split_2_metrics": split2_metrics,
+            "mae_gap": mae_gap,
+            "interpretation": "折半した2つの人間サンプル間での予測誤差（MAE）の差が極小であれば、サンプリング偏りに対してもAIの推論が一貫して安定していることを示します。"
+        },
         "out_of_sample_validation": {
-            "calibration_split": calibration_metrics,
-            "test_evaluation_split": test_metrics,
-            "generalization_notes": "キャリブレーション用データと未使用テスト用データでのMAE差分が小さいほど、未知の人間回答に対する過学習のない安定した汎化予測性能を示します。"
+            "calibration_split": split1_metrics or {},
+            "test_evaluation_split": split2_metrics or {},
+            "note": "【後方互換性エイリアス】事後校正のないZero-shot折半サンプリング頑健性検証（split_half_evaluation）を参照してください。"
         },
         "subgroup_errors": subgroup_errors,
         "individual_concordance": individual_concordance
     }
 
 def compute_distribution_metrics(ai_list: list[dict], human_list: list[dict], questions: list[dict]) -> dict[str, Any]:
-    """選択肢ごとの出現割合を比較し、MAE, RMSE, Pearson r を計算"""
+    """選択肢ごとの出現割合を比較し、MAE, RMSE, Pearson r を計算（乱数やハードコードを一切排除）"""
+    if not human_list or not ai_list:
+        return {
+            "overall_mae": None,
+            "overall_rmse": None,
+            "pearson_r": None,
+            "question_level": {}
+        }
+
     q_metrics = {}
     all_ai_probs = []
     all_human_probs = []
@@ -168,6 +206,8 @@ def compute_distribution_metrics(ai_list: list[dict], human_list: list[dict], qu
         options = q.get("options", [])
 
         if q_type in ["single", "multiple"]:
+            if not options:
+                continue
             human_counts = {opt: 0 for opt in options}
             ai_counts = {opt: 0 for opt in options}
 
@@ -187,13 +227,12 @@ def compute_distribution_metrics(ai_list: list[dict], human_list: list[dict], qu
                     for a in ans:
                         if a in ai_counts: ai_counts[a] += 1
 
-            total_h = max(1, len(human_list))
-            total_ai = max(1, len(ai_list))
+            total_h = len(human_list)
+            total_ai = len(ai_list)
 
             h_dist = {opt: round(human_counts[opt] / total_h, 3) for opt in options}
             ai_dist = {opt: round(ai_counts[opt] / total_ai, 3) for opt in options}
 
-            # 誤差計算
             diffs = [abs(ai_dist[opt] - h_dist[opt]) for opt in options]
             mae = float(np.mean(diffs)) if diffs else 0.0
             rmse = float(np.sqrt(np.mean([d**2 for d in diffs]))) if diffs else 0.0
@@ -212,13 +251,30 @@ def compute_distribution_metrics(ai_list: list[dict], human_list: list[dict], qu
             }
 
         elif q_type == "scale5":
-            h_vals = [float(r["answers"].get(q_id, 3)) for r in human_list if q_id in r["answers"]]
-            ai_vals = [float(r["answers"].get(q_id, 3)) for r in ai_list if q_id in r["answers"]]
+            h_vals = [float(r["answers"][q_id]) for r in human_list if q_id in r.get("answers", {}) and r["answers"][q_id] is not None]
+            ai_vals = [float(r["answers"][q_id]) for r in ai_list if q_id in r.get("answers", {}) and r["answers"][q_id] is not None]
 
-            h_mean = float(np.mean(h_vals)) if h_vals else 3.0
-            ai_mean = float(np.mean(ai_vals)) if ai_vals else 3.0
-            h_std = float(np.std(h_vals)) if h_vals else 0.0
-            ai_std = float(np.std(ai_vals)) if ai_vals else 0.0
+            if not h_vals or not ai_vals:
+                q_metrics[q_id] = {
+                    "question_text": q["text"],
+                    "type": "scale5",
+                    "human_mean": None,
+                    "ai_mean": None,
+                    "mean_error": None,
+                    "human_std": None,
+                    "ai_std": None
+                }
+                continue
+
+            h_mean = float(np.mean(h_vals))
+            ai_mean = float(np.mean(ai_vals))
+            h_std = float(np.std(h_vals))
+            ai_std = float(np.std(ai_vals))
+
+            # 5段階評価を1〜5の比率としても記録して相関係数に寄与
+            for score in range(1, 6):
+                all_human_probs.append(sum(1 for v in h_vals if round(v) == score) / len(h_vals))
+                all_ai_probs.append(sum(1 for v in ai_vals if round(v) == score) / len(ai_vals))
 
             q_metrics[q_id] = {
                 "question_text": q["text"],
@@ -227,28 +283,36 @@ def compute_distribution_metrics(ai_list: list[dict], human_list: list[dict], qu
                 "ai_mean": round(ai_mean, 2),
                 "mean_error": round(abs(ai_mean - h_mean), 2),
                 "human_std": round(h_std, 2),
-                "ai_std": round(ai_std, 2)
+                "ai_std": round(ai_std, 2),
+                "mae": round(abs(ai_mean - h_mean), 2),
+                "rmse": round(abs(ai_mean - h_mean), 2)
             }
 
-    # 全体ピアソン相関係数
-    if len(all_human_probs) > 2 and len(all_ai_probs) > 2:
-        r_val, p_val = stats.pearsonr(all_human_probs, all_ai_probs)
-        overall_r = round(float(r_val), 3) if not math.isnan(r_val) else 0.0
-    else:
-        overall_r = 0.85
+    # ピアソン相関係数（十分なデータと分散がある場合のみ実計算、それ以外はNone/NA）
+    overall_r = None
+    if len(all_human_probs) >= 3 and len(all_ai_probs) >= 3:
+        std_h = float(np.std(all_human_probs))
+        std_ai = float(np.std(all_ai_probs))
+        if std_h > 1e-6 and std_ai > 1e-6:
+            r_val, _ = stats.pearsonr(all_human_probs, all_ai_probs)
+            if not math.isnan(r_val):
+                overall_r = round(float(r_val), 3)
 
-    overall_mae = float(np.mean([m["mae"] for m in q_metrics.values() if "mae" in m])) if any("mae" in m for m in q_metrics.values()) else 0.0
-    overall_rmse = float(np.mean([m["rmse"] for m in q_metrics.values() if "rmse" in m])) if any("rmse" in m for m in q_metrics.values()) else 0.0
+    valid_maes = [m["mae"] for m in q_metrics.values() if m.get("mae") is not None]
+    valid_rmses = [m["rmse"] for m in q_metrics.values() if m.get("rmse") is not None]
+
+    overall_mae = round(float(np.mean(valid_maes)), 3) if valid_maes else None
+    overall_rmse = round(float(np.mean(valid_rmses)), 3) if valid_rmses else None
 
     return {
-        "overall_mae": round(overall_mae, 3),
-        "overall_rmse": round(overall_rmse, 3),
+        "overall_mae": overall_mae,
+        "overall_rmse": overall_rmse,
         "pearson_r": overall_r,
         "question_level": q_metrics
     }
 
 def compute_subgroup_errors(ai_list: list[dict], human_list: list[dict], questions: list[dict]) -> dict[str, Any]:
-    """年代・性別別の予測誤差（MAE）"""
+    """年代別の予測誤差（MAE）を厳密に計算（乱数を完全排除し、未算出はNone/NA）"""
     target_q = next((q for q in questions if q["type"] in ["single", "scale5"]), None)
     if not target_q:
         return {}
@@ -260,16 +324,29 @@ def compute_subgroup_errors(ai_list: list[dict], human_list: list[dict], questio
     for ag in age_groups:
         h_sub = [r for r in human_list if ag in r.get("age_group", "")]
         ai_sub = [r for r in ai_list if ag in r.get("persona", {}).get("age_group", "")]
+
         if h_sub and ai_sub:
-            # Scale5 の場合は平均差
             if target_q["type"] == "scale5":
-                h_m = np.mean([float(r["answers"].get(q_id, 3)) for r in h_sub])
-                ai_m = np.mean([float(r["answers"].get(q_id, 3)) for r in ai_sub])
-                by_age[ag] = round(float(abs(ai_m - h_m)), 2)
+                h_vals = [float(r["answers"].get(q_id, 3)) for r in h_sub if q_id in r.get("answers", {})]
+                ai_vals = [float(r["answers"].get(q_id, 3)) for r in ai_sub if q_id in r.get("answers", {})]
+                if h_vals and ai_vals:
+                    by_age[ag] = round(float(abs(np.mean(ai_vals) - np.mean(h_vals))), 2)
+                else:
+                    by_age[ag] = None
             else:
-                by_age[ag] = round(float(np.random.uniform(0.04, 0.12)), 3)
+                # 選択肢ごとの出現比率差分平均を厳密計算
+                options = target_q.get("options", [])
+                if options:
+                    diffs = []
+                    for opt in options:
+                        h_prop = sum(1 for r in h_sub if r["answers"].get(q_id) == opt) / len(h_sub)
+                        ai_prop = sum(1 for r in ai_sub if r["answers"].get(q_id) == opt) / len(ai_sub)
+                        diffs.append(abs(ai_prop - h_prop))
+                    by_age[ag] = round(float(np.mean(diffs)), 3)
+                else:
+                    by_age[ag] = None
         else:
-            by_age[ag] = 0.08
+            by_age[ag] = None # サンプルデータが存在しない場合はN/A
 
     return {
         "target_question": target_q["text"],
@@ -278,7 +355,6 @@ def compute_subgroup_errors(ai_list: list[dict], human_list: list[dict], questio
 
 def compute_individual_match(ai_list: list[dict], human_list: list[dict], questions: list[dict]) -> dict[str, Any]:
     """個人単位（1対1）の回答一致率判定"""
-    # participant_id と persona_code の一致を確認
     matches = 0
     total_comparisons = 0
 

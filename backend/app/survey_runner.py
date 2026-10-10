@@ -185,39 +185,31 @@ def generate_mock_answers_for_persona(persona: dict[str, Any], questions: list[d
     }
 
 async def run_batch_with_gemini(personas: list[dict[str, Any]], questions: list[dict[str, Any]], model_name: str = None) -> list[dict[str, Any]]:
-    """Gemini APIを使用してペルソナバッチの回答を生成"""
-    try:
-        from google import genai
-        from google.genai import types
+    """Gemini APIを使用してペルソナバッチの回答を生成（エラー時は例外を伝播させてフォールバックを明示）"""
+    from google import genai
+    from google.genai import types
 
-        client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        model = model_name or settings.DEFAULT_GEMINI_MODEL
-        prompt = build_batch_prompt(personas, questions)
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    model = model_name or settings.DEFAULT_GEMINI_MODEL
+    prompt = build_batch_prompt(personas, questions)
 
-        response = client.models.generate_content(
-            model=model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.7,
-            )
+    response = client.models.generate_content(
+        model=model,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            temperature=0.7,
         )
+    )
 
-        text = response.text.strip()
-        # JSON解析
-        data = json.loads(text)
-        if isinstance(data, dict) and "responses" in data:
-            return data["responses"]
-        elif isinstance(data, list):
-            return data
-        else:
-            logger.warning("Unexpected JSON format from Gemini, falling back to mock parser")
-            return [generate_mock_answers_for_persona(p, questions) for p in personas]
-
-    except Exception as e:
-        logger.error(f"Gemini API execution error: {e}. Falling back to statistical mock generator.")
-        # エラー発生時は安全に相関シミュレーターへフォールバック
-        return [generate_mock_answers_for_persona(p, questions) for p in personas]
+    text = response.text.strip()
+    data = json.loads(text)
+    if isinstance(data, dict) and "responses" in data:
+        return data["responses"]
+    elif isinstance(data, list):
+        return data
+    else:
+        raise ValueError(f"Unexpected JSON format from Gemini API: {text[:100]}")
 
 async def execute_survey_simulation(
     personas: list[dict[str, Any]],
@@ -225,27 +217,74 @@ async def execute_survey_simulation(
     model_name: str = None,
     use_mock: bool = False,
     batch_size: int = 10
-) -> list[dict[str, Any]]:
-    """コホート全員に対してアンケート調査を実行"""
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """コホート全員に対してアンケート調査を実行し、回答と実行メタ情報（実推論/モック/フォールバック）を返却"""
     all_responses = []
     total = len(personas)
 
-    # APIキーが無い、またはモック指定の場合は高速相関シミュレーターを使用
     can_use_gemini = has_gemini_api_key() and not use_mock
+    fallback_occurred = False
+    fallback_err = ""
 
     for i in range(0, total, batch_size):
         batch = personas[i:i + batch_size]
-        if can_use_gemini:
-            batch_res = await run_batch_with_gemini(batch, questions, model_name=model_name)
-            # コード突合チェック
-            res_dict = {r.get("persona_code"): r for r in batch_res if isinstance(r, dict)}
-            for p in batch:
-                if p["persona_code"] in res_dict:
-                    all_responses.append(res_dict[p["persona_code"]])
-                else:
-                    all_responses.append(generate_mock_answers_for_persona(p, questions))
+        if can_use_gemini and not fallback_occurred:
+            try:
+                batch_res = await run_batch_with_gemini(batch, questions, model_name=model_name)
+                res_dict = {r.get("persona_code"): r for r in batch_res if isinstance(r, dict)}
+                for p in batch:
+                    if p["persona_code"] in res_dict:
+                        resp = res_dict[p["persona_code"]]
+                        resp["inference_type"] = "gemini_agent"
+                        resp["is_fallback_mock"] = False
+                        all_responses.append(resp)
+                    else:
+                        mock_ans = generate_mock_answers_for_persona(p, questions)
+                        mock_ans["inference_type"] = "mock_fallback"
+                        mock_ans["is_fallback_mock"] = True
+                        all_responses.append(mock_ans)
+            except Exception as e:
+                logger.error(f"Gemini API batch execution error: {e}. Switching to mock fallback.")
+                fallback_occurred = True
+                fallback_err = str(e)
+                for p in batch:
+                    mock_ans = generate_mock_answers_for_persona(p, questions)
+                    mock_ans["inference_type"] = "mock_fallback"
+                    mock_ans["is_fallback_mock"] = True
+                    all_responses.append(mock_ans)
         else:
             for p in batch:
-                all_responses.append(generate_mock_answers_for_persona(p, questions))
+                mock_ans = generate_mock_answers_for_persona(p, questions)
+                mock_ans["inference_type"] = "mock_fallback" if fallback_occurred else "statistical_mock"
+                mock_ans["is_fallback_mock"] = fallback_occurred
+                all_responses.append(mock_ans)
 
-    return all_responses
+    if fallback_occurred:
+        meta = {
+            "engine_type": "mock_fallback",
+            "is_fallback": True,
+            "is_mock": True,
+            "model_name": "mock_fallback_statistical",
+            "error_detail": fallback_err,
+            "warning": f"【注意】Gemini API実行エラー（{fallback_err[:120]}）のため、統計モック生成に切り替えられました。実AI推論データとして集計・保存しないでください。"
+        }
+    elif not can_use_gemini:
+        meta = {
+            "engine_type": "heuristic_mock",
+            "is_fallback": False,
+            "is_mock": True,
+            "model_name": "heuristic_statistical_model",
+            "error_detail": None,
+            "warning": "明示的デモ指定またはGemini APIキー未設定のため、ルールベース統計モデルで実行しました。"
+        }
+    else:
+        meta = {
+            "engine_type": "gemini_agent",
+            "is_fallback": False,
+            "is_mock": False,
+            "model_name": model_name or settings.DEFAULT_GEMINI_MODEL,
+            "error_detail": None,
+            "warning": None
+        }
+
+    return all_responses, meta

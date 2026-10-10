@@ -113,7 +113,7 @@ class InterviewIngestRequest(BaseModel):
     name: str
     source_type: str = "text" # "text", "csv", "manual"
     raw_content: str
-    consent_confirmed: bool = True
+    consent_confirmed: bool = False
     is_demo: bool = False
 
 class VirtualABExperimentRequest(BaseModel):
@@ -124,6 +124,7 @@ class VirtualABExperimentRequest(BaseModel):
     treatment_condition: dict[str, Any] # {label, description, price, ad_copy}
     order_design: str = "counterbalanced" # "counterbalanced", "randomized"
     use_mock: bool = False
+    sample_size: Optional[int] = 50
 
 class HumanAIValidationRequest(BaseModel):
     survey_id: str
@@ -131,3 +132,9 @@ class HumanAIValidationRequest(BaseModel):
     is_demo: bool = False
     human_data_csv: Optional[str] = None # CSV string
     split_ratio: str = "50_50_split"
+
+class AutonomousResearchRequest(BaseModel):
+    research_goal: str
+    target_count: int = 50
+    generation_mode: str = "mode_b" # "mode_a", "mode_b", "mode_c"
+    use_mock: bool = False

@@ -14,6 +14,7 @@ class Settings(BaseModel):
     IS_CLOUD_RUN: bool = bool(os.getenv("K_SERVICE", ""))
     CLOUD_RUN_SERVICE: str = os.getenv("K_SERVICE", "local-dev")
     CLOUD_RUN_REVISION: str = os.getenv("K_REVISION", "rev-local")
+    RESTRICT_PUBLIC_DATA_MODIFICATION: bool = bool(os.getenv("RESTRICT_PUBLIC_DATA_MODIFICATION", "") or os.getenv("K_SERVICE", ""))
 
 settings = Settings()
 

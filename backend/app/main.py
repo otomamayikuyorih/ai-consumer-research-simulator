@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -15,8 +16,10 @@ from .schemas import (
     CohortCreateRequest, CohortOut, PersonaOut,
     SurveyCreateRequest, SurveyOut, SurveyExecutionRequest,
     InterviewMessageRequest, ConceptEvaluationRequest,
-    InterviewIngestRequest, VirtualABExperimentRequest, HumanAIValidationRequest
+    InterviewIngestRequest, VirtualABExperimentRequest, HumanAIValidationRequest,
+    AutonomousResearchRequest
 )
+from .orchestrator import run_autonomous_orchestration
 from .persona_generator import (
     generate_cohort_personas,
     get_cohort_distribution_summary,
@@ -95,6 +98,20 @@ def get_demo_interviews():
 @app.post("/api/interview-datasets/ingest")
 async def ingest_interview_dataset(req: InterviewIngestRequest, db: Session = Depends(get_db)):
     """インタビューテキストまたはCSVを取り込み、Geminiで生活実感・発言（Verbatim Quotes）を抽出"""
+    # P0安全性チェック1: 同意なしの取り込み拒否
+    if not req.consent_confirmed and not req.is_demo:
+        raise HTTPException(
+            status_code=400,
+            detail="【同意未確認】調査参加者本人の事前同意（データ提供・AIシミュレーション利用への同意）が確認されていないため、取り込みを拒否しました。"
+        )
+
+    # P0安全性チェック2: 審査用公開環境における実在個人データのアップロード制限
+    if settings.RESTRICT_PUBLIC_DATA_MODIFICATION and not req.is_demo:
+        raise HTTPException(
+            status_code=403,
+            detail="【審査用公開環境保護】個人情報保護およびセキュリティのため、公開審査環境における実在個人データの新規アップロードは制限されています。デモ用データセットをご利用ください。"
+        )
+
     extracted_profiles = []
 
     if req.source_type == "csv":
@@ -159,6 +176,14 @@ def delete_interview_dataset(dataset_id: str, db: Session = Depends(get_db)):
     ds = db.query(InterviewDataset).filter(InterviewDataset.id == dataset_id).first()
     if not ds:
         raise HTTPException(status_code=404, detail="Interview dataset not found")
+
+    # P0安全性チェック3: 審査用公開環境における初期ベースデモデータセットの削除制限
+    if settings.RESTRICT_PUBLIC_DATA_MODIFICATION and ds.is_demo:
+        raise HTTPException(
+            status_code=403,
+            detail="【審査用公開環境保護】公開審査環境における初期ベースデモデータセットの削除は制限されています。"
+        )
+
     db.delete(ds)
     db.commit()
     return {"status": "deleted", "dataset_id": dataset_id}
@@ -424,7 +449,7 @@ async def run_survey_simulation(req: SurveyExecutionRequest, db: Session = Depen
     personas_dicts = [p.to_dict() for p in personas]
 
     # 回答シミュレーション実行
-    results = await execute_survey_simulation(
+    results, execution_meta = await execute_survey_simulation(
         personas=personas_dicts,
         questions=survey.questions,
         use_mock=req.use_mock,
@@ -432,10 +457,28 @@ async def run_survey_simulation(req: SurveyExecutionRequest, db: Session = Depen
         batch_size=req.batch_size
     )
 
+    # P0安全性要件7: Gemini API失敗時はモックへの切替をユーザーに明示し、実AI推論として集計・保存しない
+    if execution_meta.get("is_fallback"):
+        survey.model_name = "mock_fallback_on_gemini_error"
+        db.commit()
+        return {
+            "survey_id": survey.id,
+            "total_simulated": len(results),
+            "total_responses": 0,
+            "status": "mock_fallback_rejected",
+            "is_fallback": True,
+            "is_mock": True,
+            "engine_type": "mock_fallback",
+            "model_used": "mock_fallback_statistical",
+            "warning": execution_meta.get("warning"),
+            "error_detail": execution_meta.get("error_detail"),
+            "sample_responses": results[:3]
+        }
+
     # 既存回答のクリア
     db.query(SurveyResponse).filter(SurveyResponse.survey_id == survey.id).delete()
 
-    # DB保存
+    # DB保存（明示的モック指定または正常なGemini推論時のみ）
     persona_map = {p.persona_code: p.id for p in personas}
     for r in results:
         p_code = r["persona_code"]
@@ -449,7 +492,7 @@ async def run_survey_simulation(req: SurveyExecutionRequest, db: Session = Depen
             )
             db.add(db_resp)
 
-    survey.model_name = req.model_name or settings.DEFAULT_GEMINI_MODEL
+    survey.model_name = execution_meta["model_name"]
     db.commit()
 
     return {
@@ -457,7 +500,11 @@ async def run_survey_simulation(req: SurveyExecutionRequest, db: Session = Depen
         "total_simulated": len(results),
         "total_responses": len(results),
         "status": "completed",
-        "model_used": survey.model_name
+        "engine_type": execution_meta.get("engine_type", "gemini_agent"),
+        "is_mock": execution_meta.get("is_mock", False),
+        "is_fallback": False,
+        "model_used": survey.model_name,
+        "warning": execution_meta.get("warning")
     }
 
 # --- 解析 & CSV ---
@@ -633,13 +680,30 @@ async def create_and_run_ab_experiment(req: VirtualABExperimentRequest, db: Sess
         control_condition=req.control_condition,
         treatment_condition=req.treatment_condition,
         order_design=req.order_design,
-        use_mock=req.use_mock
+        use_mock=req.use_mock,
+        sample_size=req.sample_size or 50
     )
 
+    # P0安全性要件7: Gemini API失敗時はモックへの切替をユーザーに明示し、実AI推論として集計・保存しない
+    if res.get("engine_type") == "mock_fallback":
+        return {
+            "id": "mock_fallback_transient",
+            "title": req.title,
+            "cohort_id": req.cohort_id,
+            "status": "mock_fallback_warning",
+            "is_fallback": True,
+            "engine_type": "mock_fallback",
+            "warning": res.get("fallback_warning"),
+            "results": res,
+            "created_at": datetime.now().isoformat()
+        }
+
     provenance = {
-        "model_version": settings.DEFAULT_GEMINI_MODEL,
+        "model_version": res.get("model_name", settings.DEFAULT_GEMINI_MODEL),
+        "engine_type": res.get("engine_type", "gemini_agent"),
+        "is_demo_mode": res.get("is_demo_mode", False),
         "academic_reference": "Nature (2026) LLMs Can Predict the Results of Social Science Experiments",
-        "sample_size": len(personas_dicts),
+        "sample_size": res.get("sample_size", len(personas_dicts)),
         "order_design": req.order_design
     }
 
@@ -789,6 +853,47 @@ def list_validations(survey_id: str = None, db: Session = Depends(get_db)):
         "is_demo": bool(r.is_demo),
         "created_at": r.created_at.isoformat()
     } for r in records]
+
+# --- 自律調査オーケストレーター (P1: エージェントらしさ) ---
+
+@app.get("/api/orchestrator/presets")
+def get_orchestrator_presets():
+    """調査オーケストレーター用の標準プリセット課題一覧"""
+    return [
+        {
+            "id": "smartwatch_health",
+            "title": "次世代スマートウォッチ健康モニタリング受容性",
+            "goal": "心電図・血圧・睡眠時無呼吸測定を搭載した次世代スマートウォッチ（月額サブスク980円）に対する20〜60代男女の受容性・価格妥当性・懸念点の調査",
+            "recommended_count": 50
+        },
+        {
+            "id": "ethical_food",
+            "title": "フードロス削減エシカル定期便の購買意向",
+            "goal": "賞味期限間近や規格外の国産高品質食材を定価の40%引で届ける定期便サービスに対する、共働き子育て世帯・単身層の受容性と価格感度調査",
+            "recommended_count": 50
+        },
+        {
+            "id": "senior_digital_support",
+            "title": "シニア向け対話型AI生活サポート端末",
+            "goal": "画面付き音声対話端末による服薬リマインド・孤独感解消・遠隔見守りサービスに対する、60代以上シニア層およびその家族の安心感と支払い意向",
+            "recommended_count": 50
+        }
+    ]
+
+@app.post("/api/orchestrator/run")
+async def run_orchestrator_pipeline(req: AutonomousResearchRequest, db: Session = Depends(get_db)):
+    """ペルソナ生成 -> 設問設計 -> 回答推論 -> 多変量解析&サマリー要約を一気通貫で自律実行"""
+    if not req.research_goal or not req.research_goal.strip():
+        raise HTTPException(status_code=400, detail="調査課題（research_goal）を入力してください。")
+
+    result = await run_autonomous_orchestration(
+        research_goal=req.research_goal.strip(),
+        target_count=req.target_count,
+        generation_mode=req.generation_mode,
+        use_mock=req.use_mock,
+        db=db
+    )
+    return result
 
 # --- 静的フロントエンド配信（本番・Cloud Run・ローカル統合用） ---
 possible_dist_paths = [

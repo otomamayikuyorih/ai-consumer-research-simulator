@@ -11,7 +11,8 @@ import {
   HelpCircle,
   Award,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Info
 } from 'lucide-react';
 import { Survey, HumanAIValidation } from '../types';
 import { runHumanAIValidation, fetchValidations } from '../services/api';
@@ -212,14 +213,14 @@ export const ValidationView: React.FC<ValidationViewProps> = ({
         {/* Train/Test Split Setting */}
         <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-slate-700">汎化検証用データ分割:</span>
+            <span className="text-xs font-semibold text-slate-700">頑健性検証用データ分割:</span>
             <select
               value={splitRatio}
               onChange={(e: any) => setSplitRatio(e.target.value)}
               className="text-xs px-3 py-1.5 border border-slate-300 rounded-lg bg-white"
             >
-              <option value="50_50_split">50:50 分割（キャリブレーション 50% / 未知評価用 50%）- 推奨</option>
-              <option value="70_30_split">70:30 分割（キャリブレーション 70% / 未知評価用 30%）</option>
+              <option value="50_50_split">50:50 折半サンプリング頑健性検証（Split-Half Robustness 50% / 50%）- 推奨</option>
+              <option value="70_30_split">70:30 サブサンプリング検証（70% / 30%）</option>
             </select>
           </div>
 
@@ -246,6 +247,17 @@ export const ValidationView: React.FC<ValidationViewProps> = ({
       {/* Validation Results View */}
       {currentValidation && results && (
         <div className="space-y-6">
+          {/* Scientific Transparency Alert */}
+          <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200 flex items-start gap-3">
+            <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+            <div className="text-xs text-blue-900 space-y-1">
+              <span className="font-bold">【科学的透明性】Zero-shot 折半サンプリング検証について</span>
+              <p className="text-blue-800 leading-relaxed">
+                {results.scientific_transparency_notice || "本検証は事後的なパラメータ最適化（校正）を行わないZero-shot推論であり、50/50折半サンプリングにより実測データとの一致度およびサンプリング頑健性を客観測定しています。"}
+              </p>
+            </div>
+          </div>
+
           {/* Demo Alert if applicable */}
           {results.is_demo_dataset && (
             <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-3">
@@ -269,7 +281,7 @@ export const ValidationView: React.FC<ValidationViewProps> = ({
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-extrabold text-slate-900">
-                  {Math.round((overall?.overall_mae || 0) * 1000) / 10}%
+                  {overall?.overall_mae != null ? `${Math.round(overall.overall_mae * 1000) / 10}%` : 'N/A'}
                 </span>
                 <span className="text-xs text-slate-500">回答比率のズレ</span>
               </div>
@@ -286,7 +298,7 @@ export const ValidationView: React.FC<ValidationViewProps> = ({
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-extrabold text-slate-900">
-                  {Math.round((overall?.overall_rmse || 0) * 1000) / 10}%
+                  {overall?.overall_rmse != null ? `${Math.round(overall.overall_rmse * 1000) / 10}%` : 'N/A'}
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 mt-2">
@@ -302,11 +314,13 @@ export const ValidationView: React.FC<ValidationViewProps> = ({
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-extrabold text-slate-900">
-                  {overall?.pearson_r}
+                  {overall?.pearson_r != null ? overall.pearson_r : 'N/A'}
                 </span>
-                <span className="text-xs font-bold text-emerald-600">
-                  {overall?.pearson_r >= 0.7 ? '強い相関' : overall?.pearson_r >= 0.4 ? '中程度の相関' : '弱い相関'}
-                </span>
+                {overall?.pearson_r != null && (
+                  <span className="text-xs font-bold text-emerald-600">
+                    {overall.pearson_r >= 0.7 ? '強い相関' : overall.pearson_r >= 0.4 ? '中程度の相関' : '弱い相関'}
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-slate-400 mt-2">
                 実測分布の形状とAI分布の方向性の一致度
@@ -316,17 +330,19 @@ export const ValidationView: React.FC<ValidationViewProps> = ({
             {/* Held-out Test Split MAE */}
             <div className="bg-white p-5 rounded-2xl border border-indigo-200 shadow-xs bg-indigo-50/10">
               <div className="flex items-center justify-between text-xs text-indigo-900 font-bold mb-1">
-                <span>未知データ評価 (Test MAE)</span>
+                <span>折半頑健性 (Held-out MAE)</span>
                 <Layers className="w-4 h-4 text-indigo-600" />
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-extrabold text-indigo-950">
-                  {Math.round((outOfSample?.test_evaluation_split?.overall_mae || 0) * 1000) / 10}%
+                  {outOfSample?.test_evaluation_split?.overall_mae != null 
+                    ? `${Math.round(outOfSample.test_evaluation_split.overall_mae * 1000) / 10}%` 
+                    : 'N/A'}
                 </span>
-                <span className="text-xs text-indigo-700">（50%保持分割）</span>
+                <span className="text-xs text-indigo-700">（50%折半分割）</span>
               </div>
               <p className="text-[11px] text-indigo-600 mt-2">
-                {outOfSample?.generalization_notes}
+                {outOfSample?.scientific_interpretation || outOfSample?.generalization_notes || "Zero-shot折半推論による頑健性検証"}
               </p>
             </div>
           </div>

@@ -42,17 +42,30 @@ export const PersonaValidationModal: React.FC<PersonaValidationModalProps> = ({
         {/* Content */}
         <div className="p-6 overflow-y-auto space-y-6 text-slate-700 text-sm">
           {/* Metadata & Source Box */}
-          <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-4 text-xs text-blue-950">
-            <div className="flex items-start gap-2 mb-2">
+          <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-4 text-xs text-blue-950 space-y-3">
+            <div className="flex items-start gap-2">
               <BookOpen className="w-4 h-4 text-blue-700 flex-shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold text-blue-900">公的統計データの出典とモデル基準:</span>
-                <p className="mt-0.5 text-blue-800">{distribution.data_source}</p>
+                <span className="font-bold text-blue-900">公的統計データの出典と対象年:</span>
+                <ul className="mt-1 list-disc list-inside space-y-0.5 text-blue-800">
+                  <li><strong>性別・年代・地方分布:</strong> 総務省統計局『令和2年国勢調査（人口等基本集計）』(2020年対象)</li>
+                  <li><strong>就業形態・職業比率:</strong> 総務省統計局『令和4年就業構造基本調査』(2022年対象)</li>
+                  <li><strong>個人所得分布:</strong> 国税庁『令和4年分 民間給与実態統計調査』(2022年対象)</li>
+                  <li><strong>世帯所得分布:</strong> 総務省統計局『2023年家計調査年報（家計収支編・総世帯）』(2023年対象)</li>
+                </ul>
               </div>
             </div>
-            <div className="flex items-start gap-2 mt-2 pt-2 border-t border-blue-200/60 text-slate-600">
-              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              <p>{distribution.notes}</p>
+
+            <div className="pt-2 border-t border-blue-200/60">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold text-slate-800">手動設定した仮定（学術・市場調査モデル）:</span>
+                  <p className="mt-0.5 text-slate-600 leading-relaxed">
+                    公的統計に直接存在しない心理的変数（6つの消費価値観セグメント比率：コスパ層24%、保守層22%、トレンド層18%、こだわり層16%、エシカル層12%、デジタル層8%）および主な情報接触チャネル・意思決定スタイルは、一般的な消費者調査モデルに基づく仮定として手動定義・正規化しています。
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
