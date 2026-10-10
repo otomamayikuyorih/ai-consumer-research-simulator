@@ -63,17 +63,26 @@ app.add_middleware(
 
 @app.get("/api/status")
 def get_system_status():
+    from .gemini_service import is_gemini_available
+    available, provider, model = is_gemini_available()
+    mode_desc = (
+        "Live Gemini API (Google AI Studio Key)" if provider == "gemini_developer_api"
+        else f"Live Gemini API (Vertex AI ADC: {model})" if provider == "vertex_ai"
+        else "Offline Statistical Heuristic Simulation"
+    )
     return {
         "status": "online",
         "has_gemini_key": has_gemini_api_key(),
-        "default_model": settings.DEFAULT_GEMINI_MODEL,
-        "mode": "Live Gemini API" if has_gemini_api_key() else "Offline Statistical Heuristic Simulation",
+        "gemini_available": available,
+        "gemini_provider": provider,
+        "default_model": model or settings.DEFAULT_GEMINI_MODEL,
+        "mode": mode_desc,
         "google_cloud": {
             "is_cloud_run": settings.IS_CLOUD_RUN,
             "project_id": settings.GOOGLE_CLOUD_PROJECT,
             "service": settings.CLOUD_RUN_SERVICE,
             "revision": settings.CLOUD_RUN_REVISION,
-            "ai_product": "Google Gemini 3.8 Flash / Vertex AI Model Garden",
+            "ai_product": f"Google Gemini ({model or settings.DEFAULT_GEMINI_MODEL}) / Vertex AI Model Garden",
             "execution_product": "Cloud Run (Fully Managed Serverless Container)"
         },
         "features": {
@@ -888,10 +897,11 @@ async def run_orchestrator_pipeline(req: AutonomousResearchRequest, db: Session 
 
     result = await run_autonomous_orchestration(
         research_goal=req.research_goal.strip(),
-        target_count=req.target_count,
+        target_count=req.sample_size or req.target_count,
         generation_mode=req.generation_mode,
         use_mock=req.use_mock,
         db=db
+
     )
     return result
 

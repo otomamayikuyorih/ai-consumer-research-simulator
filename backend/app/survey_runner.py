@@ -184,32 +184,25 @@ def generate_mock_answers_for_persona(persona: dict[str, Any], questions: list[d
         "reasoning": reasoning
     }
 
-async def run_batch_with_gemini(personas: list[dict[str, Any]], questions: list[dict[str, Any]], model_name: str = None) -> list[dict[str, Any]]:
+async def run_batch_with_gemini(personas: list[dict[str, Any]], questions: list[dict[str, Any]], model_name: str = None) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Gemini APIを使用してペルソナバッチの回答を生成（エラー時は例外を伝播させてフォールバックを明示）"""
-    from google import genai
-    from google.genai import types
-
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
-    model = model_name or settings.DEFAULT_GEMINI_MODEL
+    from .gemini_service import call_gemini_json_with_tracking
     prompt = build_batch_prompt(personas, questions)
-
-    response = client.models.generate_content(
-        model=model,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            temperature=0.7,
-        )
+    data, meta = await call_gemini_json_with_tracking(
+        prompt=prompt,
+        prefer_model=model_name or settings.DEFAULT_GEMINI_MODEL,
+        temperature=0.7
     )
 
-    text = response.text.strip()
-    data = json.loads(text)
+    responses = []
     if isinstance(data, dict) and "responses" in data:
-        return data["responses"]
+        responses = data["responses"]
     elif isinstance(data, list):
-        return data
+        responses = data
     else:
-        raise ValueError(f"Unexpected JSON format from Gemini API: {text[:100]}")
+        raise ValueError(f"Unexpected JSON format from Gemini API: {str(data)[:100]}")
+
+    return responses, meta
 
 async def execute_survey_simulation(
     personas: list[dict[str, Any]],
@@ -219,23 +212,35 @@ async def execute_survey_simulation(
     batch_size: int = 10
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """コホート全員に対してアンケート調査を実行し、回答と実行メタ情報（実推論/モック/フォールバック）を返却"""
+    from .gemini_service import is_gemini_available
     all_responses = []
     total = len(personas)
 
-    can_use_gemini = has_gemini_api_key() and not use_mock
+    available, provider, resolved_model = is_gemini_available()
+    can_use_gemini = available and not use_mock
     fallback_occurred = False
     fallback_err = ""
+    api_calls_count = 0
+    total_tokens = {"prompt_tokens": 0, "candidates_tokens": 0, "total_tokens": 0}
+    actual_model_used = resolved_model
 
     for i in range(0, total, batch_size):
         batch = personas[i:i + batch_size]
         if can_use_gemini and not fallback_occurred:
             try:
-                batch_res = await run_batch_with_gemini(batch, questions, model_name=model_name)
+                batch_res, batch_meta = await run_batch_with_gemini(batch, questions, model_name=model_name)
+                api_calls_count += 1
+                actual_model_used = batch_meta.get("model_used", resolved_model)
+                b_tok = batch_meta.get("tokens", {})
+                total_tokens["prompt_tokens"] += b_tok.get("prompt_tokens", 0)
+                total_tokens["candidates_tokens"] += b_tok.get("candidates_tokens", 0)
+                total_tokens["total_tokens"] += b_tok.get("total_tokens", 0)
+
                 res_dict = {r.get("persona_code"): r for r in batch_res if isinstance(r, dict)}
                 for p in batch:
                     if p["persona_code"] in res_dict:
                         resp = res_dict[p["persona_code"]]
-                        resp["inference_type"] = "gemini_agent"
+                        resp["inference_type"] = f"{provider}_agent"
                         resp["is_fallback_mock"] = False
                         all_responses.append(resp)
                     else:
@@ -264,7 +269,9 @@ async def execute_survey_simulation(
             "engine_type": "mock_fallback",
             "is_fallback": True,
             "is_mock": True,
-            "model_name": "mock_fallback_statistical",
+            "model_name": f"mock_fallback ({actual_model_used} 失敗)",
+            "api_calls_count": api_calls_count,
+            "tokens_used": total_tokens,
             "error_detail": fallback_err,
             "warning": f"【注意】Gemini API実行エラー（{fallback_err[:120]}）のため、統計モック生成に切り替えられました。実AI推論データとして集計・保存しないでください。"
         }
@@ -274,17 +281,22 @@ async def execute_survey_simulation(
             "is_fallback": False,
             "is_mock": True,
             "model_name": "heuristic_statistical_model",
+            "api_calls_count": 0,
+            "tokens_used": total_tokens,
             "error_detail": None,
-            "warning": "明示的デモ指定またはGemini APIキー未設定のため、ルールベース統計モデルで実行しました。"
+            "warning": "明示的デモ指定またはGemini/Vertex AI未初期化のため、ルールベース統計モデルで実行しました。"
         }
     else:
         meta = {
-            "engine_type": "gemini_agent",
+            "engine_type": f"{provider}_agent",
             "is_fallback": False,
             "is_mock": False,
-            "model_name": model_name or settings.DEFAULT_GEMINI_MODEL,
+            "model_name": actual_model_used,
+            "api_calls_count": api_calls_count,
+            "tokens_used": total_tokens,
             "error_detail": None,
             "warning": None
         }
 
     return all_responses, meta
+

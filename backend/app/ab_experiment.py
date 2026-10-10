@@ -52,9 +52,12 @@ async def run_virtual_ab_experiment(
     control_scores = {"purchase_intent": [], "perceived_value": [], "price_fairness": [], "recommendation_likelihood": []}
     treatment_scores = {"purchase_intent": [], "perceived_value": [], "price_fairness": [], "recommendation_likelihood": []}
 
-    can_use_gemini = has_gemini_api_key() and not use_mock
+    from .gemini_service import is_gemini_available
+    available, provider, resolved_model = is_gemini_available()
+    can_use_gemini = available and not use_mock
 
     if can_use_gemini:
+
         try:
             # Gemini 3.8 Flash によるバッチ評価
             gemini_evals = await evaluate_cohort_with_gemini(
@@ -225,12 +228,9 @@ async def evaluate_cohort_with_gemini(
     model_name: str = None,
     batch_size: int = 5
 ) -> list[dict[str, Any]]:
-    """Gemini 3.8 Flash にペルソナごとの提示順序を反映させたプロンプトでA/B評価を実行"""
-    from google import genai
-    from google.genai import types
+    """Gemini / Vertex AI にペルソナごとの提示順序を反映させたプロンプトでA/B評価を実行"""
+    from .gemini_service import call_gemini_json_with_tracking
 
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
-    model = model_name or settings.DEFAULT_GEMINI_MODEL
 
     all_evaluations = []
 
@@ -304,19 +304,14 @@ async def evaluate_cohort_with_gemini(
 
         prompt = "\n".join(prompt_parts)
 
-        response = client.models.generate_content(
-            model=model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.6,
-            )
+        data, meta = await call_gemini_json_with_tracking(
+            prompt=prompt,
+            prefer_model=model_name or settings.DEFAULT_GEMINI_MODEL,
+            temperature=0.6
         )
+        eval_list = data.get("evaluations", []) if isinstance(data, dict) else []
+        eval_map = {e["persona_code"]: e for e in eval_list if isinstance(e, dict) and "persona_code" in e}
 
-        res_text = response.text.strip()
-        data = json.loads(res_text)
-        eval_list = data.get("evaluations", [])
-        eval_map = {e["persona_code"]: e for e in eval_list if "persona_code" in e}
 
         # バッチ内の各ペルソナの結果を整理
         for p, order in batch:

@@ -64,17 +64,13 @@ async def chat_with_persona(
 ) -> str:
     """ペルソナとの1on1インタビュー対話メッセージ生成"""
     system_prompt = build_persona_system_prompt(persona, survey_answers)
+    from .gemini_service import is_gemini_available, call_gemini_text_with_tracking
+    available, provider, resolved_model = is_gemini_available()
 
-    if has_gemini_api_key():
+    if available:
         try:
-            from google import genai
-            from google.genai import types
-
-            client = genai.Client(api_key=settings.GEMINI_API_KEY)
-            model = model_name or settings.DEFAULT_GEMINI_MODEL
-
             # 会話履歴の構築
-            prompt_contents = [system_prompt]
+            prompt_contents = []
             for msg in history:
                 role = "User" if msg["role"] == "user" else "Model"
                 prompt_contents.append(f"{role}: {msg['content']}")
@@ -82,16 +78,16 @@ async def chat_with_persona(
 
             full_prompt = "\n\n".join(prompt_contents)
 
-            response = client.models.generate_content(
-                model=model,
-                contents=full_prompt,
-                config=types.GenerateContentConfig(
-                    temperature=0.8,
-                )
+            text, meta = await call_gemini_text_with_tracking(
+                prompt=full_prompt,
+                system_instruction=system_prompt,
+                prefer_model=model_name or settings.DEFAULT_GEMINI_MODEL,
+                temperature=0.8
             )
-            return response.text.strip()
+            return text
         except Exception as e:
             logger.error(f"Gemini API chat error: {e}. Falling back to mock persona response.")
+
 
     # オフライン／モック応答エンジン
     return generate_mock_interview_response(persona, user_message, survey_answers)

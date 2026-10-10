@@ -14,15 +14,13 @@ async def evaluate_concept_with_gemini(
     use_mock: bool = False
 ) -> dict[str, Any]:
     """Gemini APIを用いた新商品・サービスコンセプトの受容性評価"""
-    if use_mock or not has_gemini_api_key():
+    from .gemini_service import is_gemini_available, call_gemini_json_with_tracking
+    available, provider, resolved_model = is_gemini_available()
+    if use_mock or not available:
         return evaluate_concept_heuristic(concept, sample_personas)
 
     try:
-        from google import genai
-        from google.genai import types
 
-        client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        model = model_name or settings.DEFAULT_GEMINI_MODEL
 
         personas_summary = []
         for p in sample_personas[:15]:
@@ -61,15 +59,11 @@ async def evaluate_concept_with_gemini(
   "overall_critique": "総評コメント（2〜3文）"
 }}
 """
-        response = client.models.generate_content(
-            model=model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.6,
-            )
+        data, meta = await call_gemini_json_with_tracking(
+            prompt=prompt,
+            prefer_model=model_name or settings.DEFAULT_GEMINI_MODEL,
+            temperature=0.6
         )
-        data = json.loads(response.text.strip())
         return data
     except Exception as e:
         logger.error(f"Gemini concept eval error: {e}. Falling back to heuristic.")

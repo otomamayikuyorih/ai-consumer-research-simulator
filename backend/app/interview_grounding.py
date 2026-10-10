@@ -129,16 +129,14 @@ def parse_interview_csv(csv_text: str) -> list[dict[str, Any]]:
     return records
 
 async def extract_interview_grounding(raw_text: str, metadata: dict[str, Any] = None) -> dict[str, Any]:
-    """Gemini APIを用いてインタビューテキストから7次元の生活者属性と肉声発言を抽出"""
-    if not has_gemini_api_key():
+    from .gemini_service import is_gemini_available, call_gemini_json_with_tracking
+    available, provider, resolved_model = is_gemini_available()
+    if not available:
         # オフライン・モック抽出
         return extract_grounding_heuristic(raw_text, metadata)
 
     try:
-        from google import genai
-        from google.genai import types
 
-        client = genai.Client(api_key=settings.GEMINI_API_KEY)
         prompt = f"""
 あなたは質的社会調査および生活者インサイト分析のエキスパートです。
 以下のインタビュー記録（文字起こし）から、生活者の意思決定モデルを構築するための要素を抽出してください。
@@ -171,15 +169,11 @@ async def extract_interview_grounding(raw_text: str, metadata: dict[str, Any] = 
   ]
 }}
 """
-        response = client.models.generate_content(
-            model=settings.DEFAULT_GEMINI_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=0.3,
-            )
+        data, meta = await call_gemini_json_with_tracking(
+            prompt=prompt,
+            prefer_model=settings.DEFAULT_GEMINI_MODEL,
+            temperature=0.3
         )
-        data = json.loads(response.text.strip())
         return data
     except Exception as e:
         logger.error(f"Gemini interview extraction failed: {e}. Falling back to heuristic.")

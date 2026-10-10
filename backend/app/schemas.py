@@ -136,5 +136,6 @@ class HumanAIValidationRequest(BaseModel):
 class AutonomousResearchRequest(BaseModel):
     research_goal: str
     target_count: int = 50
+    sample_size: Optional[int] = None
     generation_mode: str = "mode_b" # "mode_a", "mode_b", "mode_c"
     use_mock: bool = False

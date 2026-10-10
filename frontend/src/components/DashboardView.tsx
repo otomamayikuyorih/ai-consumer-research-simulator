@@ -301,54 +301,96 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="space-y-6 pt-4 border-t border-slate-200">
             {/* Step Progress & Observability Cards (P1-9) */}
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
                   <Cpu className="w-4 h-4 text-indigo-600" />
-                  自律エージェント実行ステップ履歴 & 稼働モデル (Execution Provenance)
-                </h4>
-                <span className="text-[11px] font-mono text-slate-500">
-                  Total Latency: {orchestratorResult.total_duration_ms}ms
-                </span>
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    自律エージェント実行ステップ履歴 & 稼働モデル (Execution Provenance)
+                  </h4>
+                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                    orchestratorResult.overall_status === 'completed'
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      : orchestratorResult.overall_status === 'partial_fallback'
+                      ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                      : orchestratorResult.overall_status === 'fallback_demo_mode'
+                      ? 'bg-sky-100 text-sky-800 border border-sky-300'
+                      : 'bg-rose-100 text-rose-800 border border-rose-300'
+                  }`}>
+                    {orchestratorResult.overall_status === 'completed' && '✓ 実AI推論完了 (Vertex AI / Gemini)'}
+                    {orchestratorResult.overall_status === 'partial_fallback' && '⚠️ 一部モック切替 (API失敗検知)'}
+                    {orchestratorResult.overall_status === 'fallback_demo_mode' && '⚠️ デモモード (統計相関モック実行)'}
+                    {orchestratorResult.overall_status === 'failed' && '❌ 失敗'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-[11px] font-mono text-slate-500">
+                  <span>
+                    所要時間: <strong className="text-slate-700">{orchestratorResult.total_duration_sec ?? (orchestratorResult.total_duration_ms / 1000).toFixed(2)}秒</strong> ({orchestratorResult.total_duration_ms}ms)
+                  </span>
+                  <span>•</span>
+                  <span>
+                    API呼出: <strong className="text-slate-700">{orchestratorResult.total_api_calls ?? 0}回</strong>
+                  </span>
+                  <span>•</span>
+                  <span>
+                    トークン: <strong className="text-indigo-600">{orchestratorResult.total_tokens?.total_tokens?.toLocaleString() ?? 0} tokens</strong>
+                  </span>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {orchestratorResult.steps?.map((step: any, idx: number) => (
-                  <div key={idx} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-slate-500">Step {idx + 1}</span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        step.status === 'completed'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : step.status === 'error'
-                          ? 'bg-rose-100 text-rose-800'
-                          : 'bg-indigo-100 text-indigo-800'
-                      }`}>
-                        {step.status === 'completed' ? '✓ 完了' : step.status}
-                      </span>
-                    </div>
-
-                    <div className="text-xs font-bold text-slate-800 leading-snug">
-                      {step.step_name}
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-200/60 text-[11px] space-y-1 text-slate-600 font-mono">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Model:</span>
-                        <span className="font-semibold text-slate-700 truncate max-w-[120px]" title={step.model_used}>
-                          {step.model_used}
+                {orchestratorResult.steps?.map((step: any, idx: number) => {
+                  const stepName = step.step_name || step.name;
+                  const isFallback = step.is_fallback || step.status === 'fallback_mock';
+                  const isDone = step.status === 'completed';
+                  return (
+                    <div key={idx} className={`p-3.5 rounded-xl border space-y-2 ${
+                      isFallback
+                        ? 'border-amber-300 bg-amber-50/50'
+                        : isDone
+                        ? 'border-slate-200 bg-slate-50/70'
+                        : 'border-rose-200 bg-rose-50/50'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-slate-500">Step {idx + 1}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          isDone
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : isFallback
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-rose-100 text-rose-800'
+                        }`}>
+                          {isDone ? '✓ 実推論完了' : isFallback ? '⚠️ モック切替' : '❌ エラー'}
                         </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Duration:</span>
-                        <span>{step.duration_ms}ms</span>
+
+                      <div className="text-xs font-bold text-slate-800 leading-snug">
+                        {stepName}
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Retries:</span>
-                        <span>{step.retries}回</span>
+
+                      <div className="pt-2 border-t border-slate-200/60 text-[11px] space-y-1 text-slate-600 font-mono">
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Model:</span>
+                          <span className="font-semibold text-slate-700 truncate max-w-[130px]" title={step.model_used}>
+                            {step.model_used}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Duration:</span>
+                          <span>{step.duration_ms}ms</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">API Calls / Tok:</span>
+                          <span>{step.api_calls_count ?? 0}回 / {step.tokens_used?.total_tokens ? `${step.tokens_used.total_tokens}t` : '-'}</span>
+                        </div>
+                        {step.fallback_reason && (
+                          <div className="pt-1 text-[10px] text-amber-700 leading-tight">
+                            理由: {step.fallback_reason}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -359,16 +401,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <div className="flex items-center gap-2">
                     <Target className="w-5 h-5 text-indigo-600" />
                     <h3 className="text-sm font-bold text-indigo-950">
-                      リサーチ・エグゼクティブサマリー & 戦略提言
+                      {orchestratorResult.executive_summary.headline || 'リサーチ・エグゼクティブサマリー & 戦略提言'}
                     </h3>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-200/60 text-indigo-800">
-                    Gemini 3.8 Flash 要約
+                    Google Gemini / Vertex AI 自動要約
                   </span>
                 </div>
 
                 <p className="text-xs text-indigo-950 leading-relaxed font-medium">
-                  {orchestratorResult.executive_summary.summary}
+                  {orchestratorResult.executive_summary.summary_text || orchestratorResult.executive_summary.summary}
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
@@ -393,7 +435,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     </h4>
                     <div className="text-xs text-slate-700">
                       <span className="font-bold text-indigo-900">推奨ターゲット:</span>{' '}
-                      {orchestratorResult.executive_summary.recommended_target}
+                      {orchestratorResult.executive_summary.target_recommendation || orchestratorResult.executive_summary.recommended_target}
                     </div>
                     <ul className="text-xs text-slate-600 space-y-1 list-disc list-inside pt-1">
                       {orchestratorResult.executive_summary.strategic_actions?.map((a: string, i: number) => (

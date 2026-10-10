@@ -11,12 +11,15 @@ class Settings(BaseModel):
     
     # Google Cloud 実行環境情報
     GOOGLE_CLOUD_PROJECT: str = os.getenv("GOOGLE_CLOUD_PROJECT", os.getenv("GCP_PROJECT", "stable-century-479407-m7"))
-    IS_CLOUD_RUN: bool = bool(os.getenv("K_SERVICE", ""))
+    GOOGLE_CLOUD_LOCATION: str = os.getenv("GOOGLE_CLOUD_LOCATION", os.getenv("GCP_LOCATION", "asia-northeast1"))
+    IS_CLOUD_RUN: bool = bool(os.getenv("K_SERVICE", "")) or (os.getenv("IS_CLOUD_RUN", "false").lower() == "true")
     CLOUD_RUN_SERVICE: str = os.getenv("K_SERVICE", "local-dev")
     CLOUD_RUN_REVISION: str = os.getenv("K_REVISION", "rev-local")
     RESTRICT_PUBLIC_DATA_MODIFICATION: bool = bool(os.getenv("RESTRICT_PUBLIC_DATA_MODIFICATION", "") or os.getenv("K_SERVICE", ""))
+    USE_VERTEX_AI: bool = os.getenv("USE_VERTEX_AI", "false").lower() == "true" or bool(os.getenv("K_SERVICE", "")) or (os.getenv("IS_CLOUD_RUN", "false").lower() == "true")
 
 settings = Settings()
 
 def has_gemini_api_key() -> bool:
     return bool(settings.GEMINI_API_KEY and settings.GEMINI_API_KEY.strip())
+
